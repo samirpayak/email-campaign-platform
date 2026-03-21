@@ -4,6 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(cors({ origin: '*', credentials: true }));
@@ -38,6 +39,124 @@ function adminOnly(req, res, next) {
     });
 }
 
+// ── Gmail Transporter ─────────────────────────────────────────────────────────
+function createTransporter() {
+    return nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD
+        }
+    });
+}
+
+// ── Send Email Route ──────────────────────────────────────────────────────────
+app.post('/api/email/send', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const { groupId, subject, body, campaignName } = req.body;
+
+        if (!groupId || !subject || !body) {
+            return res.status(400).json({ success: false, message: 'Group, subject and body are required.' });
+        }
+
+        // Get group with all emails
+        const group = await Group.findById(groupId);
+        if (!group) return res.status(404).json({ success: false, message: 'Group not found.' });
+        if (!group.emails || group.emails.length === 0) {
+            return res.status(400).json({ success: false, message: 'No emails in this group.' });
+        }
+
+        const transporter = createTransporter();
+
+        // Verify Gmail connection first
+        await transporter.verify();
+
+        let sent = 0;
+        let failed = 0;
+        const errors = [];
+
+        // Send to each recipient with delay
+        for (let i = 0; i < group.emails.length; i++) {
+            const recipientEmail = group.emails[i];
+            const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+
+            // Personalise body with name
+            const personalBody = body
+                .replace(/\{name\}/gi, recipientName)
+                .replace(/\{email\}/gi, recipientEmail);
+
+            try {
+                await transporter.sendMail({
+                    from: `"${process.env.GMAIL_SENDER_NAME || 'Trugydex'}" <${process.env.GMAIL_USER}>`,
+                    to: recipientEmail,
+                    subject: subject,
+                    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+                        ${personalBody.replace(/\n/g, '<br>')}
+                        <br><br>
+                        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+                        <p style="font-size:12px;color:#999;text-align:center;">
+                            Sent by Trugydex Email Platform | trugydex.in
+                        </p>
+                    </div>`,
+                    text: personalBody
+                });
+                sent++;
+            } catch (err) {
+                failed++;
+                errors.push({ email: recipientEmail, error: err.message });
+            }
+
+            // Delay 2 seconds between emails to avoid spam filters
+            if (i < group.emails.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        // Save campaign to DB
+        await Campaign.create({
+            name: campaignName || 'Untitled Campaign',
+            groupId,
+            groupName: group.name,
+            subject,
+            body,
+            recipientCount: sent,
+            status: failed === 0 ? 'sent' : 'partial',
+            sentBy: req.user.userId
+        });
+
+        res.json({
+            success: true,
+            message: `Campaign completed! Sent: ${sent}, Failed: ${failed}`,
+            sent,
+            failed,
+            errors: errors.slice(0, 5)
+        });
+
+    } catch (e) {
+        console.error('Email send error:', e);
+        res.status(500).json({ success: false, message: 'Email sending failed: ' + e.message });
+    }
+});
+
+// ── Test Email Route ──────────────────────────────────────────────────────────
+app.post('/api/email/test', authMiddleware, async (req, res) => {
+    try {
+        const transporter = createTransporter();
+        await transporter.verify();
+        await transporter.sendMail({
+            from: `"Trugydex" <${process.env.GMAIL_USER}>`,
+            to: process.env.GMAIL_USER,
+            subject: 'Trugydex — Test Email',
+            html: '<h2>Test email working!</h2><p>Your Gmail is connected to Trugydex platform successfully.</p>'
+        });
+        res.json({ success: true, message: 'Test email sent to ' + process.env.GMAIL_USER });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Test failed: ' + e.message });
+    }
+});
+
+// ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Trugydex API running', time: new Date() }));
 
 app.get('/api/auth/seed', async (req, res) => {
