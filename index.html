@@ -851,7 +851,7 @@
             <form class="login-form active" id="loginForm" onsubmit="handleLogin(event)">
                 <div class="form-group">
                     <label class="form-label">User ID</label>
-                    <input type="email" id="loginEmail" placeholder="Enter your User ID" required />
+                    <input type="text" id="loginEmail" placeholder="Enter your User ID" required />
                 </div>
                 
                 <div class="form-group">
@@ -870,7 +870,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">User ID</label>
-                    <input type="email" id="signupEmail" placeholder="Enter your User ID" required />
+                    <input type="text" id="signupEmail" placeholder="Enter your User ID e.g. EMP001" required />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
@@ -1342,7 +1342,7 @@
             const confirm = document.getElementById('signupConfirm').value;
 
             if (!name) { showSignupNotice('Please enter your full name.'); return; }
-            if (!email || !email.includes('@')) { showSignupNotice('Please enter a valid User ID (email format).'); return; }
+            if (!email || email.length < 3) { showSignupNotice('Please enter a valid User ID (minimum 3 characters).'); return; }
             if (password.length < 6) { showSignupNotice('Password must be at least 6 characters.'); return; }
             if (password !== confirm) { showSignupNotice('Passwords do not match.'); return; }
 
