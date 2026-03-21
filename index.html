@@ -1850,37 +1850,66 @@
             if (!body) { alert('Please write the email body'); return; }
 
             const group = groups.find(g => g._id === idx) || groups[idx];
+            const totalRecipients = group ? group.recipientCount : 0;
+
+            const confirmed = confirm(
+                'CONFIRM SEND CAMPAIGN\n\n' +
+                'Group: ' + (group ? group.name : idx) + '\n' +
+                'Recipients: ' + totalRecipients + '\n' +
+                'Subject: ' + subject + '\n\n' +
+                'Emails will be sent from trugydexcompliance@gmail.com\n' +
+                'Estimated time: ' + Math.ceil(totalRecipients * 2 / 60) + ' minute(s)\n\n' +
+                'Are you sure you want to send?'
+            );
+            if (!confirmed) return;
+
             const btn = document.querySelector('[onclick="sendEmail()"]');
-            if (btn) { btn.textContent = 'Saving campaign...'; btn.disabled = true; }
+            if (btn) { btn.innerHTML = '&#9203; Sending emails... please wait'; btn.disabled = true; btn.style.background = '#f59e0b'; }
+
+            // Show progress bar
+            let progressDiv = document.getElementById('sendProgress');
+            if (!progressDiv) {
+                progressDiv = document.createElement('div');
+                progressDiv.id = 'sendProgress';
+                progressDiv.style.cssText = 'margin-top:1rem;padding:1rem;background:#eff6ff;border-radius:8px;border-left:4px solid #003087;font-size:13px;';
+                btn.parentNode.insertBefore(progressDiv, btn.nextSibling);
+            }
+            progressDiv.innerHTML = '&#128231; Sending emails to ' + totalRecipients + ' recipients...<br><small>Do not close this window. This may take a few minutes.</small>';
+            progressDiv.style.display = 'block';
 
             try {
-                const data = await apiCall('/campaigns', 'POST', {
-                    name: campaignName || 'Untitled Campaign',
+                const data = await apiCall('/email/send', 'POST', {
                     groupId: idx,
                     subject,
                     body,
-                    attachments: attachedFiles.map(f => f.name)
+                    campaignName: campaignName || 'Untitled Campaign'
                 }, true);
 
-                const attachMsg = attachedFiles.length > 0
-                    ? '\nAttachments: ' + attachedFiles.map(f => f.name).join(', ')
-                    : '\nAttachments: None';
-                alert('✓ Campaign saved!\n\nGroup: ' + group.name + '\nRecipients: ' + group.recipientCount + attachMsg);
+                progressDiv.style.background = '#f0fdf4';
+                progressDiv.style.borderColor = '#2E7D32';
+                progressDiv.innerHTML = '&#10003; ' + data.message;
 
-                document.getElementById('selectGroup').value = '';
-                document.getElementById('campaignName').value = '';
-                document.getElementById('emailSubject').value = '';
-                document.getElementById('emailBody').value = '';
-                document.getElementById('sendDelay').value = '2';
-                attachedFiles = [];
-                renderAttachmentList();
-                updateGroupPreview();
-                loadDashboardData();
-                switchTab('history');
+                if (btn) { btn.innerHTML = 'Send Campaign'; btn.disabled = false; btn.style.background = ''; }
+
+                setTimeout(() => {
+                    document.getElementById('selectGroup').value = '';
+                    document.getElementById('campaignName').value = '';
+                    document.getElementById('emailSubject').value = '';
+                    document.getElementById('emailBody').value = '';
+                    document.getElementById('sendDelay').value = '2';
+                    attachedFiles = [];
+                    renderAttachmentList();
+                    updateGroupPreview();
+                    loadDashboardData();
+                    if (progressDiv) progressDiv.style.display = 'none';
+                    switchTab('history');
+                }, 3000);
+
             } catch(err) {
-                alert('Failed to save campaign: ' + err.message);
-            } finally {
-                if (btn) { btn.textContent = 'Send Campaign'; btn.disabled = false; }
+                progressDiv.style.background = '#fef2f2';
+                progressDiv.style.borderColor = '#ef4444';
+                progressDiv.innerHTML = '&#10060; Failed: ' + err.message;
+                if (btn) { btn.innerHTML = 'Send Campaign'; btn.disabled = false; btn.style.background = ''; }
             }
         }
         
