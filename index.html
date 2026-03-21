@@ -850,8 +850,8 @@
             <!-- Login Form -->
             <form class="login-form active" id="loginForm" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label class="form-label">Email Address</label>
-                    <input type="email" id="loginEmail" placeholder="your@email.com" required />
+                    <label class="form-label">User ID</label>
+                    <input type="email" id="loginEmail" placeholder="Enter your User ID" required />
                 </div>
                 
                 <div class="form-group">
@@ -869,8 +869,8 @@
                     <input type="text" id="signupName" placeholder="Your Full Name" required />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Email Address</label>
-                    <input type="email" id="signupEmail" placeholder="your@email.com" required />
+                    <label class="form-label">User ID</label>
+                    <input type="email" id="signupEmail" placeholder="Enter your User ID" required />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
@@ -1231,49 +1231,60 @@
         // 5. Implement proper session management on server
         // ===========================================
         
-        let users = [];
-        
-        // ✅ SECURE: To add users safely, use a backend API
-        // Example (requires backend server):
-        // POST /api/users/register with email & password
-        // Server validates and stores securely
-        
-        // For testing ONLY - replace with secure backend
-        function initializeTestUsers() {
-            // IMPORTANT: Change these credentials immediately after testing!
-            // In production, load users from secure backend server
-            const testUsers = [
-                // Add test users here through secure backend only
-                // Never commit real credentials to code
-            ];
-            users = testUsers;
+        // ── Backend API Configuration ──────────────────────────────────────
+        const API_BASE = 'https://trugydex-backend.vercel.app/api';
+
+        async function apiCall(endpoint, method, body, requiresAuth) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (requiresAuth) {
+                const token = localStorage.getItem('tg_token');
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+            }
+            const res = await fetch(API_BASE + endpoint, {
+                method: method || 'GET',
+                headers,
+                body: body ? JSON.stringify(body) : undefined
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Request failed');
+            return data;
         }
-        
-        // Auto-initialize (remove in production)
-        // initializeTestUsers();
-        
+
         let currentUser = null;
         
-        // ─── Session Persistence ─────────────────────────────────────────
-        function saveSession(user) {
-            localStorage.setItem('campaignManagerSession', JSON.stringify(user));
+        // ─── Session Persistence (JWT based) ────────────────────────────
+        function saveSession(token, user) {
+            localStorage.setItem('tg_token', token);
+            localStorage.setItem('tg_user', JSON.stringify(user));
         }
-        
+
         function loadSession() {
-            const session = localStorage.getItem('campaignManagerSession');
-            return session ? JSON.parse(session) : null;
+            const user = localStorage.getItem('tg_user');
+            return user ? JSON.parse(user) : null;
         }
-        
+
         function clearSession() {
-            localStorage.removeItem('campaignManagerSession');
+            localStorage.removeItem('tg_token');
+            localStorage.removeItem('tg_user');
         }
-        
+
         // Check if user is already logged in on page load
-        window.addEventListener('load', function() {
-            const savedSession = loadSession();
-            if (savedSession) {
-                currentUser = savedSession;
-                showDashboard();
+        window.addEventListener('load', async function() {
+            const token = localStorage.getItem('tg_token');
+            const savedUser = loadSession();
+            if (token && savedUser) {
+                try {
+                    const data = await apiCall('/auth/verify', 'POST', null, true);
+                    if (data.success) {
+                        currentUser = savedUser;
+                        showDashboard();
+                        loadDashboardData();
+                    } else {
+                        clearSession();
+                    }
+                } catch(e) {
+                    clearSession();
+                }
             }
         });
         let campaigns = [];
@@ -1302,32 +1313,28 @@
             document.getElementById('loginPassword').value = password;
         }
         
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
+            const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
-            
-            const user = users.find(u => u.email === email && u.password === password);
-            
-            if (user) {
-                if (user.status === 'pending') {
-                    showLoginNotice('⏳ Your account is pending admin approval. Please wait.', 'error');
-                    return;
-                }
-                if (user.status === 'rejected') {
-                    showLoginNotice('🚫 Your account access has been denied by the administrator.', 'error');
-                    return;
-                }
-                currentUser = user;
-                saveSession(user);
+            const btn = e.target.querySelector('button[type="submit"]') || document.querySelector('#loginForm .button-login');
+            if (btn) { btn.textContent = 'Logging in...'; btn.disabled = true; }
+
+            try {
+                const data = await apiCall('/auth/login', 'POST', { email, password });
+                saveSession(data.token, data.user);
+                currentUser = data.user;
                 showDashboard();
-                alert('✓ Welcome back, ' + user.name + '!');
-            } else {
-                alert('❌ Invalid email or password');
+                loadDashboardData();
+                showLoginNotice('Welcome back, ' + data.user.name + '!', 'success');
+            } catch(err) {
+                showLoginNotice(err.message, 'error');
+            } finally {
+                if (btn) { btn.textContent = 'Login'; btn.disabled = false; }
             }
         }
         
-        function handleSignup(e) {
+        async function handleSignup(e) {
             e.preventDefault();
             const name = document.getElementById('signupName').value.trim();
             const email = document.getElementById('signupEmail').value.trim();
@@ -1335,17 +1342,25 @@
             const confirm = document.getElementById('signupConfirm').value;
 
             if (!name) { showSignupNotice('Please enter your full name.'); return; }
-            if (!email || !email.includes('@')) { showSignupNotice('Please enter a valid email address.'); return; }
+            if (!email || !email.includes('@')) { showSignupNotice('Please enter a valid User ID (email format).'); return; }
             if (password.length < 6) { showSignupNotice('Password must be at least 6 characters.'); return; }
             if (password !== confirm) { showSignupNotice('Passwords do not match.'); return; }
-            if (users.find(u => u.email === email)) { showSignupNotice('This email is already registered.'); return; }
 
-            users.push({ email, password, name, role: 'Employee', registeredAt: new Date().toLocaleString(), status: 'pending', emailVerified: false });
-            document.getElementById('signupForm').reset();
-            switchLoginTab('login');
-            document.getElementById('loginEmail').value = email;
-            document.getElementById('loginPassword').value = password;
-            showLoginNotice('Account created! Awaiting admin approval before you can login.', 'success');
+            const btn = document.querySelector('#signupForm .button-login');
+            if (btn) { btn.textContent = 'Creating account...'; btn.disabled = true; }
+
+            try {
+                await apiCall('/auth/signup', 'POST', { name, email, password });
+                document.getElementById('signupForm').reset();
+                switchLoginTab('login');
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('loginPassword').value = password;
+                showLoginNotice('Account created! Awaiting admin approval before you can login.', 'success');
+            } catch(err) {
+                showSignupNotice(err.message);
+            } finally {
+                if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
+            }
         }
 
         function showSignupNotice(msg) {
@@ -1397,67 +1412,71 @@
             updatePendingBadge();
         }
 
-        function renderUserLog() {
+        async function renderUserLog() {
             const tbody = document.getElementById('userLogTableBody');
-            const pending = users.filter(u => u.status === 'pending').length;
-            const approved = users.filter(u => u.status === 'approved').length;
-            const rejected = users.filter(u => u.status === 'rejected').length;
-            document.getElementById('totalUsersCount').textContent = users.length;
-            document.getElementById('pendingUsersCount').textContent = pending;
-            document.getElementById('approvedUsersCount').textContent = approved;
-            document.getElementById('rejectedUsersCount').textContent = rejected;
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-secondary);">Loading users...</td></tr>';
+            try {
+                const data = await apiCall('/users', 'GET', null, true);
+                const users = data.users;
+                document.getElementById('totalUsersCount').textContent = data.stats.total;
+                document.getElementById('pendingUsersCount').textContent = data.stats.pending;
+                document.getElementById('approvedUsersCount').textContent = data.stats.approved;
+                document.getElementById('rejectedUsersCount').textContent = data.stats.rejected;
+                updatePendingBadgeCount(data.stats.pending);
 
-            tbody.innerHTML = users.map((u, i) => {
-                const roleColor = u.role === 'Administrator' ? '#1e40af' : u.role === 'Manager' ? '#92400e' : '#2E7D32';
-                const roleBg = u.role === 'Administrator' ? '#dbeafe' : u.role === 'Manager' ? '#fef3c7' : '#d1fae5';
-                const statusBadge = u.status === 'approved'
-                    ? '<span class="status-badge status-valid">Approved</span>'
-                    : u.status === 'pending'
-                    ? '<span class="status-badge" style="background:#fef9c3;color:#854d0e;">Pending</span>'
-                    : '<span class="status-badge status-invalid">Rejected</span>';
-                const actions = u.role === 'Administrator' ? '<span style="font-size:11px;color:var(--text-secondary);">—</span>' :
-                    u.status === 'pending' ? `
-                        <button onclick="approveUser(${i})" style="background:#d1fae5;color:#2E7D32;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px;">✓ Approve</button>
-                        <button onclick="rejectUser(${i})" style="background:#fee2e2;color:#ef4444;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✕ Reject</button>
-                    ` : u.status === 'approved' ? `
-                        <button onclick="rejectUser(${i})" style="background:#fee2e2;color:#ef4444;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✕ Revoke</button>
-                    ` : `
-                        <button onclick="approveUser(${i})" style="background:#d1fae5;color:#2E7D32;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✓ Approve</button>
-                    `;
-                return `<tr>
-                    <td>${i + 1}</td>
-                    <td style="font-weight:600;">${u.name}</td>
-                    <td style="font-size:12px;">${u.email}</td>
-                    <td><span class="status-badge" style="background:${roleBg};color:${roleColor};">${u.role}</span></td>
-                    <td>${statusBadge}</td>
-                    <td style="font-size:11px;color:var(--text-secondary);">${u.registeredAt || '-'}</td>
-                    <td>${actions}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        function approveUser(index) {
-            users[index].status = 'approved';
-            renderUserLog();
-            updatePendingBadge();
-        }
-
-        function rejectUser(index) {
-            users[index].status = 'rejected';
-            // Force logout if this user is currently logged in
-            if (currentUser && currentUser.email === users[index].email) {
-                handleLogout();
+                tbody.innerHTML = users.map((u, i) => {
+                    const roleColor = u.role === 'Administrator' ? '#1e40af' : u.role === 'Manager' ? '#92400e' : '#2E7D32';
+                    const roleBg = u.role === 'Administrator' ? '#dbeafe' : u.role === 'Manager' ? '#fef3c7' : '#d1fae5';
+                    const statusBadge = u.status === 'approved'
+                        ? '<span class="status-badge status-valid">Approved</span>'
+                        : u.status === 'pending'
+                        ? '<span class="status-badge" style="background:#fef9c3;color:#854d0e;">Pending</span>'
+                        : '<span class="status-badge status-invalid">Rejected</span>';
+                    const actions = u.role === 'Administrator' ? '<span style="font-size:11px;color:var(--text-secondary);">—</span>' :
+                        u.status === 'pending' ? `
+                            <button onclick="approveUser('${u._id}')" style="background:#d1fae5;color:#2E7D32;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px;">✓ Approve</button>
+                            <button onclick="rejectUser('${u._id}')" style="background:#fee2e2;color:#ef4444;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✕ Reject</button>
+                        ` : u.status === 'approved' ? `
+                            <button onclick="rejectUser('${u._id}')" style="background:#fee2e2;color:#ef4444;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✕ Revoke</button>
+                        ` : `
+                            <button onclick="approveUser('${u._id}')" style="background:#d1fae5;color:#2E7D32;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✓ Approve</button>
+                        `;
+                    const regDate = u.registeredAt ? new Date(u.registeredAt).toLocaleString() : '-';
+                    return `<tr>
+                        <td>${i + 1}</td>
+                        <td style="font-weight:600;">${u.name} ${u.emailVerified ? '<span title="Email Verified" style="color:#2E7D32;font-size:12px;">✔️</span>' : ''}</td>
+                        <td style="font-size:12px;">${u.email}</td>
+                        <td><span class="status-badge" style="background:${roleBg};color:${roleColor};">${u.role}</span></td>
+                        <td>${statusBadge}</td>
+                        <td style="font-size:11px;color:var(--text-secondary);">${regDate}</td>
+                        <td>${actions}</td>
+                    </tr>`;
+                }).join('');
+            } catch(err) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#ef4444;padding:1rem;">Failed to load users: ' + err.message + '</td></tr>';
             }
-            renderUserLog();
-            updatePendingBadge();
         }
 
-        function updatePendingBadge() {
-            const pending = users.filter(u => u.status === 'pending').length;
+        async function approveUser(userId) {
+            try {
+                await apiCall('/users/' + userId + '/approve', 'PUT', null, true);
+                renderUserLog();
+            } catch(err) { alert('Failed: ' + err.message); }
+        }
+
+        async function rejectUser(userId) {
+            try {
+                await apiCall('/users/' + userId + '/reject', 'PUT', null, true);
+                renderUserLog();
+            } catch(err) { alert('Failed: ' + err.message); }
+        }
+
+        function updatePendingBadge() {}
+        function updatePendingBadgeCount(count) {
             const badge = document.getElementById('pendingBadge');
             if (badge) {
-                badge.textContent = pending;
-                badge.style.display = pending > 0 ? 'inline-block' : 'none';
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
             }
         }
         
@@ -1636,64 +1655,64 @@
             `).join('');
         }
         
-        function createGroupFromUpload() {
+        async function createGroupFromUpload() {
             const emailCol = document.getElementById('emailColumn').value;
             const nameCol = document.getElementById('nameColumn').value;
             const groupName = document.getElementById('uploadGroupName').value.trim();
             const groupDesc = document.getElementById('uploadGroupDesc').value.trim();
-            
-            if (!emailCol) {
-                alert('Please select the email column');
-                return;
-            }
-            if (!groupName) {
-                alert('Please enter a group name');
-                return;
-            }
-            
+
+            if (!emailCol) { alert('Please select the email column'); return; }
+            if (!groupName) { alert('Please enter a group name'); return; }
+
             const emailsData = [];
             uploadedData.forEach(row => {
                 const email = row[emailCol] ? row[emailCol].trim() : '';
                 const name = nameCol ? (row[nameCol] ? row[nameCol].trim() : '') : '';
-                
                 if (email && email.includes('@') && email.includes('.')) {
                     emailsData.push({ email, name });
                 }
             });
-            
-            if (emailsData.length === 0) {
-                alert('No valid emails found');
-                return;
+
+            if (emailsData.length === 0) { alert('No valid emails found'); return; }
+
+            const btn = document.querySelector('[onclick="createGroupFromUpload()"]');
+            if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+
+            try {
+                const data = await apiCall('/groups', 'POST', {
+                    name: groupName,
+                    description: groupDesc,
+                    emails: emailsData.map(e => e.email),
+                    names: emailsData.map(e => e.name)
+                }, true);
+
+                document.getElementById('uploadGroupName').value = '';
+                document.getElementById('uploadGroupDesc').value = '';
+                document.getElementById('fileInput').value = '';
+                document.getElementById('fileInfo').classList.remove('show');
+                document.getElementById('previewEmpty').style.display = 'block';
+                document.getElementById('previewData').style.display = 'none';
+                uploadedData = [];
+                loadDashboardData();
+                alert('✓ ' + data.message);
+            } catch(err) {
+                alert('Failed to create group: ' + err.message);
+            } finally {
+                if (btn) { btn.textContent = 'Create Group from Upload'; btn.disabled = false; }
             }
-            
-            const group = {
-                id: Date.now(),
-                name: groupName,
-                desc: groupDesc,
-                emails: emailsData.map(e => e.email),
-                names: emailsData.map(e => e.name),
-                createdAt: new Date().toLocaleDateString(),
-                recipientCount: emailsData.length
-            };
-            
-            groups.push(group);
-            
-            document.getElementById('uploadGroupName').value = '';
-            document.getElementById('uploadGroupDesc').value = '';
-            document.getElementById('fileInput').value = '';
-            document.getElementById('fileInfo').classList.remove('show');
-            document.getElementById('previewEmpty').style.display = 'block';
-            document.getElementById('previewData').style.display = 'none';
-            uploadedData = [];
-            
-            updateDashboard();
-            alert('✓ Group "' + groupName + '" created with ' + emailsData.length + ' recipients!');
         }
         
-        function updateGroupDropdown() {
+        async function updateGroupDropdown() {
             const select = document.getElementById('selectGroup');
-            select.innerHTML = '<option value="">Choose a group...</option>' + 
-                groups.map((g, i) => `<option value="${i}">${g.name} (${g.recipientCount} recipients)</option>`).join('');
+            select.innerHTML = '<option value="">Loading groups...</option>';
+            try {
+                const data = await apiCall('/groups', 'GET', null, true);
+                groups = data.groups;
+                select.innerHTML = '<option value="">Choose a group...</option>' +
+                    groups.map(g => `<option value="${g._id}">${g.name} (${g.recipientCount} recipients)</option>`).join('');
+            } catch(err) {
+                select.innerHTML = '<option value="">Failed to load groups</option>';
+            }
         }
         
         function updateGroupPreview() {
@@ -1711,14 +1730,14 @@
                 return;
             }
             
-            const group = groups[idx];
+            const group = groups.find(g => g._id === idx) || groups[idx];
             const subject = document.getElementById('emailSubject').value || '(no subject)';
             const body = document.getElementById('emailBody').value || '(empty)';
             const delay = parseInt(document.getElementById('sendDelay').value) || 2;
-            const totalSecs = group.emails.length * delay;
+            const totalSecs = (group.recipientCount || 0) * delay;
             const mins = Math.ceil(totalSecs / 60);
             
-            previewDiv.textContent = group.name + ' (' + group.emails.length + ' recipients)';
+            previewDiv.textContent = group.name + ' (' + group.recipientCount + ' recipients)';
             subjectDiv.textContent = subject;
             bodyDiv.textContent = body;
             timeDiv.textContent = mins + ' minute(s)';
@@ -1820,87 +1839,103 @@
             summary.style.display = 'flex';
         }
         
-        function sendEmail() {
+        async function sendEmail() {
             const idx = document.getElementById('selectGroup').value;
             const campaignName = document.getElementById('campaignName').value.trim();
             const subject = document.getElementById('emailSubject').value.trim();
             const body = document.getElementById('emailBody').value.trim();
-            
-            if (!idx) {
-                alert('Please select a recipient group');
-                return;
-            }
-            if (!subject) {
-                alert('Please enter an email subject');
-                return;
-            }
-            if (!body) {
-                alert('Please write the email body');
-                return;
-            }
-            
-            const group = groups[idx];
-            const campaign = {
-                id: Date.now(),
-                name: campaignName || 'Untitled Campaign',
-                groupName: group.name,
-                subject: subject,
-                recipientCount: group.emails.length,
-                sentAt: new Date().toLocaleString(),
-                status: 'Sent',
-                attachments: attachedFiles.map(f => f.name)
-            };
-            
-            campaigns.push(campaign);
-            
-            const attachMsg = attachedFiles.length > 0
-                ? '\nAttachments: ' + attachedFiles.length + ' file(s) (' + attachedFiles.map(f => f.name).join(', ') + ')'
-                : '\nAttachments: None';
 
-            alert('✓ Campaign ready to send!\n\nGroup: ' + group.name + '\nRecipients: ' + group.emails.length + attachMsg);
-            
-            document.getElementById('selectGroup').value = '';
-            document.getElementById('campaignName').value = '';
-            document.getElementById('emailSubject').value = '';
-            document.getElementById('emailBody').value = '';
-            document.getElementById('sendDelay').value = '2';
-            attachedFiles = [];
-            renderAttachmentList();
-            updateGroupPreview();
-            updateDashboard();
-            switchTab('history');
+            if (!idx) { alert('Please select a recipient group'); return; }
+            if (!subject) { alert('Please enter an email subject'); return; }
+            if (!body) { alert('Please write the email body'); return; }
+
+            const group = groups.find(g => g._id === idx) || groups[idx];
+            const btn = document.querySelector('[onclick="sendEmail()"]');
+            if (btn) { btn.textContent = 'Saving campaign...'; btn.disabled = true; }
+
+            try {
+                const data = await apiCall('/campaigns', 'POST', {
+                    name: campaignName || 'Untitled Campaign',
+                    groupId: idx,
+                    subject,
+                    body,
+                    attachments: attachedFiles.map(f => f.name)
+                }, true);
+
+                const attachMsg = attachedFiles.length > 0
+                    ? '\nAttachments: ' + attachedFiles.map(f => f.name).join(', ')
+                    : '\nAttachments: None';
+                alert('✓ Campaign saved!\n\nGroup: ' + group.name + '\nRecipients: ' + group.recipientCount + attachMsg);
+
+                document.getElementById('selectGroup').value = '';
+                document.getElementById('campaignName').value = '';
+                document.getElementById('emailSubject').value = '';
+                document.getElementById('emailBody').value = '';
+                document.getElementById('sendDelay').value = '2';
+                attachedFiles = [];
+                renderAttachmentList();
+                updateGroupPreview();
+                loadDashboardData();
+                switchTab('history');
+            } catch(err) {
+                alert('Failed to save campaign: ' + err.message);
+            } finally {
+                if (btn) { btn.textContent = 'Send Campaign'; btn.disabled = false; }
+            }
         }
         
-        function updateDashboard() {
-            document.getElementById('totalGroups').textContent = groups.length;
-            document.getElementById('totalRecipients').textContent = groups.reduce((sum, g) => sum + g.recipientCount, 0);
-            document.getElementById('emailsSent').textContent = campaigns.length;
-            
-            const activity = document.getElementById('recentActivity');
-            if (groups.length === 0) {
-                activity.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No groups created yet. Upload emails to get started!</p>';
-            } else {
-                activity.innerHTML = groups.slice(-5).reverse().map(g => `
-                    <div class="recent-item">
-                        <strong>${g.name}</strong>
-                        <p>${g.recipientCount} recipients • ${g.createdAt}</p>
-                    </div>
-                `).join('');
-            }
-            
-            const history = document.getElementById('campaignHistory');
-            if (campaigns.length === 0) {
-                history.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No campaigns sent yet</p>';
-            } else {
-                history.innerHTML = campaigns.slice().reverse().map(c => `
-                    <div class="recent-item">
-                        <strong>${c.name}</strong>
-                        <p>📧 Subject: ${c.subject}</p>
-                        <p>👥 Group: ${c.groupName} &bull; ${c.recipientCount} recipients</p>
-                        <p>📎 Attachments: ${c.attachments && c.attachments.length > 0 ? c.attachments.join(', ') : 'None'}</p>
-                        <p>🕐 Sent: ${c.sentAt}</p>
-                    </div>
-                `).join('');
+        function updateDashboard() { loadDashboardData(); }
+
+        async function loadDashboardData() {
+            try {
+                // Load stats
+                const statsData = await apiCall('/campaigns/stats', 'GET', null, true);
+                document.getElementById('totalGroups').textContent = statsData.stats.totalGroups;
+                document.getElementById('totalRecipients').textContent = statsData.stats.totalRecipients;
+                document.getElementById('emailsSent').textContent = statsData.stats.totalCampaigns;
+
+                // Load recent groups
+                const groupData = await apiCall('/groups', 'GET', null, true);
+                groups = groupData.groups;
+                const activity = document.getElementById('recentActivity');
+                if (groups.length === 0) {
+                    activity.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No groups created yet. Upload emails to get started!</p>';
+                } else {
+                    activity.innerHTML = groups.slice(0, 5).map(g => `
+                        <div class="recent-item">
+                            <strong>${g.name}</strong>
+                            <p>${g.recipientCount} recipients &bull; ${new Date(g.createdAt).toLocaleDateString()}</p>
+                        </div>
+                    `).join('');
+                }
+
+                // Load campaign history
+                const campData = await apiCall('/campaigns', 'GET', null, true);
+                campaigns = campData.campaigns;
+                const history = document.getElementById('campaignHistory');
+                if (campaigns.length === 0) {
+                    history.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No campaigns sent yet</p>';
+                } else {
+                    history.innerHTML = campaigns.map(c => `
+                        <div class="recent-item">
+                            <strong>${c.name}</strong>
+                            <p>📧 Subject: ${c.subject}</p>
+                            <p>👥 Group: ${c.groupName} &bull; ${c.recipientCount} recipients</p>
+                            <p>📎 Attachments: ${c.attachments && c.attachments.length > 0 ? c.attachments.join(', ') : 'None'}</p>
+                            <p>🕐 Sent: ${new Date(c.sentAt).toLocaleString()}</p>
+                        </div>
+                    `).join('');
+                }
+
+                // Update pending badge for admin
+                if (currentUser && currentUser.role === 'Administrator') {
+                    try {
+                        const userData = await apiCall('/users', 'GET', null, true);
+                        updatePendingBadgeCount(userData.stats.pending);
+                    } catch(e) {}
+                }
+            } catch(err) {
+                console.error('Dashboard load error:', err.message);
             }
         }
     </script>
