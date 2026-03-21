@@ -18,7 +18,7 @@ async function connectDB() {
     isConnected = true;
 }
 
-const userSchema = new mongoose.Schema({ name: String, email: { type: String, unique: true, lowercase: true }, password: String, role: { type: String, default: 'Employee' }, status: { type: String, default: 'pending' }, emailVerified: { type: Boolean, default: false }, registeredAt: { type: Date, default: Date.now }, lastLogin: Date });
+const userSchema = new mongoose.Schema({ name: String, email: { type: String, unique: true }, password: String, role: { type: String, default: 'Employee' }, status: { type: String, default: 'pending' }, emailVerified: { type: Boolean, default: false }, registeredAt: { type: Date, default: Date.now }, lastLogin: Date });
 const groupSchema = new mongoose.Schema({ name: String, description: String, emails: [String], names: [String], recipientCount: { type: Number, default: 0 }, createdBy: mongoose.Schema.Types.ObjectId, createdAt: { type: Date, default: Date.now } });
 const campaignSchema = new mongoose.Schema({ name: String, groupId: mongoose.Schema.Types.ObjectId, groupName: String, subject: String, body: String, recipientCount: { type: Number, default: 0 }, attachments: [String], status: { type: String, default: 'sent' }, sentBy: mongoose.Schema.Types.ObjectId, sentAt: { type: Date, default: Date.now } });
 
@@ -175,7 +175,7 @@ app.post('/api/auth/login', async (req, res) => {
         await connectDB();
         const { email, password } = req.body;
         if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required.' });
-        const user = await User.findOne({ email: email.toLowerCase().trim() });
+        const user = await User.findOne({ email: email.trim() });
         if (!user) return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(401).json({ success: false, message: 'Invalid email or password.' });
@@ -192,11 +192,12 @@ app.post('/api/auth/signup', async (req, res) => {
         await connectDB();
         const { name, email, password } = req.body;
         if (!name || !email || !password) return res.status(400).json({ success: false, message: 'All fields required.' });
+        if (email.trim().length < 3) return res.status(400).json({ success: false, message: 'User ID must be at least 3 characters.' });
         if (password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
-        const existing = await User.findOne({ email: email.toLowerCase().trim() });
-        if (existing) return res.status(409).json({ success: false, message: 'Email already registered.' });
+        const existing = await User.findOne({ email: email.trim() });
+        if (existing) return res.status(409).json({ success: false, message: 'User ID already registered.' });
         const hashed = await bcrypt.hash(password, 12);
-        await User.create({ name, email: email.toLowerCase().trim(), password: hashed, role: 'Employee', status: 'pending' });
+        await User.create({ name, email: email.trim(), password: hashed, role: 'Employee', status: 'pending' });
         res.status(201).json({ success: true, message: 'Account created! Awaiting admin approval.' });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
