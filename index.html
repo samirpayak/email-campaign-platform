@@ -962,6 +962,76 @@
             
             <!-- Bulk Upload Tab -->
             <div id="upload" class="tab-panel">
+
+                <!-- File Format Guide -->
+                <div style="background:#fff;border:2px solid var(--border-color);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+                    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--primary-blue);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:2px solid var(--light-blue);">
+                        📋 How to Prepare Your Email List
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+
+                        <!-- Step by step -->
+                        <div>
+                            <div style="font-size:13px;font-weight:700;color:var(--primary-blue);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Step by Step</div>
+                            <div style="font-size:13px;color:var(--text-primary);line-height:2;">
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">1️⃣ &nbsp;Open <strong>Microsoft Excel</strong> or <strong>Google Sheets</strong></div>
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">2️⃣ &nbsp;In <strong>Row 1</strong> type: &nbsp;<code style="background:#f0f4f9;padding:2px 8px;border-radius:4px;color:var(--primary-blue);">Email</code> &nbsp;in column A, &nbsp;<code style="background:#f0f4f9;padding:2px 8px;border-radius:4px;color:var(--primary-blue);">Name</code> &nbsp;in column B</div>
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">3️⃣ &nbsp;From <strong>Row 2</strong> onwards — enter email addresses and names</div>
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">4️⃣ &nbsp;Save as <strong>.csv</strong> or <strong>.xlsx</strong></div>
+                                <div style="padding:6px 0;">5️⃣ &nbsp;Upload the file here</div>
+                            </div>
+                        </div>
+
+                        <!-- Example table -->
+                        <div>
+                            <div style="font-size:13px;font-weight:700;color:var(--primary-blue);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Example File Format</div>
+                            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                                <thead>
+                                    <tr style="background:var(--primary-blue);color:white;">
+                                        <th style="padding:8px 12px;text-align:left;border-radius:4px 0 0 0;">Email</th>
+                                        <th style="padding:8px 12px;text-align:left;border-radius:0 4px 0 0;">Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="background:var(--light-blue);">
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">jay@gmail.com</td>
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Jay</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">sweetu@gmail.com</td>
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Sweetu</td>
+                                    </tr>
+                                    <tr style="background:var(--light-blue);">
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">samir@gmail.com</td>
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Samir</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:7px 12px;">client@company.com</td>
+                                        <td style="padding:7px 12px;">Client Name</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Download sample -->
+                            <button onclick="downloadSampleCSV()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,var(--primary-green),#1b5e20);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.5px;">
+                                ⬇️ Download Sample CSV File
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Important rules -->
+                    <div style="margin-top:1rem;padding:12px;background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;font-size:12px;">
+                        <strong style="color:#92400e;">⚠️ Important Rules:</strong>
+                        <span style="color:#78350f;">
+                            &nbsp;• First row MUST have headers (Email, Name) &nbsp;|&nbsp;
+                            Email must contain @ and . &nbsp;|&nbsp;
+                            Supported formats: CSV, XLSX, XLS &nbsp;|&nbsp;
+                            Max 500 emails per file recommended
+                        </span>
+                    </div>
+                </div>
+
                 <div class="alert alert-info">
                     <strong>📁 Upload Email Lists:</strong> Drag & drop or click to upload CSV/Excel files. Supported formats: .csv, .xlsx, .xls
                 </div>
@@ -1966,6 +2036,17 @@
             } catch(err) {
                 console.error('Dashboard load error:', err.message);
             }
+        }
+
+        function downloadSampleCSV() {
+            const csvContent = "Email,Name\njay@gmail.com,Jay\nsweetu@gmail.com,Sweetu\nsamir@gmail.com,Samir\nclient@company.com,Client Name\n";
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trugydex_sample_emails.csv';
+            a.click();
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
