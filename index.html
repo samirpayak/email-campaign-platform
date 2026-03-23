@@ -1304,6 +1304,22 @@
         // ── Backend API Configuration ──────────────────────────────────────
         const API_BASE = 'https://mail.trugydex.in/api';
 
+        // Test backend connection on load
+        window.addEventListener('load', async function() {
+            try {
+                const r = await fetch(API_BASE + '/health');
+                const d = await r.json();
+                console.log('Backend OK:', d.message);
+            } catch(e) {
+                console.error('Backend UNREACHABLE:', e.message);
+                // Show visible warning
+                const warn = document.createElement('div');
+                warn.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ef4444;color:white;text-align:center;padding:10px;font-size:13px;font-weight:700;z-index:9999;';
+                warn.textContent = 'Backend connection failed: ' + e.message;
+                document.body.appendChild(warn);
+            }
+        });
+
         async function apiCall(endpoint, method, body, requiresAuth) {
             const headers = { 'Content-Type': 'application/json' };
             if (requiresAuth) {
@@ -1398,7 +1414,8 @@
                 loadDashboardData();
                 showLoginNotice('Welcome back, ' + data.user.name + '!', 'success');
             } catch(err) {
-                showLoginNotice(err.message, 'error');
+                showLoginNotice(err.message || 'Connection failed. Check your internet.', 'error');
+                console.error('Login error:', err);
             } finally {
                 if (btn) { btn.textContent = 'Login'; btn.disabled = false; }
             }
@@ -1427,7 +1444,8 @@
                 document.getElementById('loginPassword').value = password;
                 showLoginNotice('Account created! Awaiting admin approval before you can login.', 'success');
             } catch(err) {
-                showSignupNotice(err.message);
+                showSignupNotice(err.message || 'Connection failed. Please try again.');
+                console.error('Signup error:', err);
             } finally {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
             }
@@ -1452,15 +1470,22 @@
             if (!notice) {
                 notice = document.createElement('div');
                 notice.id = 'loginNotice';
-                notice.style.cssText = 'padding:10px 14px;border-radius:8px;margin-bottom:1rem;font-size:13px;font-weight:600;text-align:center;';
+                notice.style.cssText = 'padding:12px 16px;border-radius:8px;margin-bottom:1rem;font-size:14px;font-weight:700;text-align:center;border:2px solid;';
                 const loginForm = document.getElementById('loginForm');
                 loginForm.insertBefore(notice, loginForm.firstChild);
             }
             notice.textContent = msg;
-            notice.style.background = type === 'success' ? '#d1fae5' : '#fee2e2';
-            notice.style.color = type === 'success' ? '#2E7D32' : '#ef4444';
+            if (type === 'success') {
+                notice.style.background = '#d1fae5';
+                notice.style.color = '#2E7D32';
+                notice.style.borderColor = '#2E7D32';
+            } else {
+                notice.style.background = '#fee2e2';
+                notice.style.color = '#ef4444';
+                notice.style.borderColor = '#ef4444';
+            }
             notice.style.display = 'block';
-            setTimeout(() => { notice.style.display = 'none'; }, 5000);
+            setTimeout(() => { notice.style.display = 'none'; }, 8000);
         }
 
         function showDashboard() {
