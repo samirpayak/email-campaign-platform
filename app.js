@@ -751,7 +751,7 @@
                             <p>📎 Attachments: ${c.attachments && c.attachments.length > 0 ? c.attachments.join(', ') : 'None'}</p>
                             <p>🕐 Sent: ${new Date(c.sentAt).toLocaleString()}</p>
                         </div>
-                    \`).join('');
+                    `).join('');
                 }
 
                 if (currentUser && currentUser.role === 'Administrator') {
