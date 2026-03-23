@@ -661,21 +661,27 @@
 
             try {
                 // Build signature HTML
-                const signatureHtml = `<br><br>
-                    <table style="width:100%;border-top:2px solid #003087;padding-top:12px;margin-top:16px;">
-                        <tr>
-                            <td style="vertical-align:middle;padding-right:16px;width:130px;">
-                                <img src="/logo.png" alt="Trugydex" style="width:120px;height:auto;" />
-                            </td>
-                            <td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:16px;">
-                                <p style="margin:0;font-size:14px;font-weight:700;color:#003087;">Trugydex Compliance</p>
-                                <p style="margin:4px 0 0;font-size:12px;color:#666;">SAHI SALAH SUCHAN</p>
-                                <p style="margin:4px 0 0;font-size:12px;color:#666;">trugydexcompliance@gmail.com</p>
-                                <p style="margin:4px 0 0;font-size:12px;color:#666;">www.trugydex.in</p>
-                            </td>
-                        </tr>
-                    </table>
-                    <p style="font-size:11px;color:#aaa;text-align:center;margin-top:12px;">&copy; 2026 Trugydex. All rights reserved.</p>`;
+                // Read from editable signature fields
+                var sigName    = document.getElementById('sigName') ? document.getElementById('sigName').value : 'Trugydex Compliance';
+                var sigTitle   = document.getElementById('sigTitle') ? document.getElementById('sigTitle').value : 'SAHI SALAH SUCHAN';
+                var sigEmail   = document.getElementById('sigEmail') ? document.getElementById('sigEmail').value : 'trugydexcompliance@gmail.com';
+                var sigWebsite = document.getElementById('sigWebsite') ? document.getElementById('sigWebsite').value : 'www.trugydex.in';
+                var sigPhone   = document.getElementById('sigPhone') ? document.getElementById('sigPhone').value : '';
+
+                var signatureHtml = '<br><br>' +
+                    '<table style="width:100%;border-top:2px solid #003087;padding-top:12px;margin-top:16px;">' +
+                    '<tr>' +
+                    '<td style="vertical-align:middle;padding-right:16px;width:130px;">' +
+                    '<img src="/logo.png" alt="Trugydex" style="width:120px;height:auto;" />' +
+                    '</td>' +
+                    '<td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:16px;">' +
+                    '<p style="margin:0;font-size:14px;font-weight:700;color:#003087;">' + sigName + '</p>' +
+                    '<p style="margin:4px 0 0;font-size:12px;color:#666;">' + sigTitle + '</p>' +
+                    (sigPhone ? '<p style="margin:4px 0 0;font-size:12px;color:#666;">' + sigPhone + '</p>' : '') +
+                    '<p style="margin:4px 0 0;font-size:12px;color:#666;">' + sigEmail + '</p>' +
+                    '<p style="margin:4px 0 0;font-size:12px;color:#666;">' + sigWebsite + '</p>' +
+                    '</td></tr></table>' +
+                    '<p style="font-size:11px;color:#aaa;text-align:center;margin-top:12px;">&copy; 2026 Trugydex. All rights reserved.</p>';
 
                 const data = await apiCall('/email/send', 'POST', {
                     groupId: idx,
@@ -763,6 +769,24 @@
             } catch(err) {
                 console.error('Dashboard load error:', err.message);
             }
+        }
+
+        function updateSignaturePreview() {
+            var name    = document.getElementById('sigName') ? document.getElementById('sigName').value : '';
+            var title   = document.getElementById('sigTitle') ? document.getElementById('sigTitle').value : '';
+            var email   = document.getElementById('sigEmail') ? document.getElementById('sigEmail').value : '';
+            var website = document.getElementById('sigWebsite') ? document.getElementById('sigWebsite').value : '';
+            var phone   = document.getElementById('sigPhone') ? document.getElementById('sigPhone').value : '';
+            var preview = document.getElementById('sigPreviewName');
+            if (preview) preview.textContent = name;
+            var pt = document.getElementById('sigPreviewTitle');
+            if (pt) pt.textContent = title;
+            var pe = document.getElementById('sigPreviewEmail');
+            if (pe) pe.textContent = email;
+            var pw = document.getElementById('sigPreviewWebsite');
+            if (pw) pw.textContent = website;
+            var pp = document.getElementById('sigPreviewPhone');
+            if (pp) { pp.textContent = phone; pp.style.display = phone ? 'block' : 'none'; }
         }
 
         function downloadSampleCSV() {
