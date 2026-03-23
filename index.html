@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#003087">
     <title>Email Campaign Manager - Trugydex</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -995,19 +995,19 @@
                                 </thead>
                                 <tbody>
                                     <tr style="background:var(--light-blue);">
-                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2d474c546d4a404c4441034e4240">[email&#160;protected]</a></td>
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"></td>
                                         <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Jay</td>
                                     </tr>
                                     <tr>
-                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ddaeaab8b8a9a89dbab0bcb4b1f3beb2b0">[email&#160;protected]</a></td>
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"></td>
                                         <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Sweetu</td>
                                     </tr>
                                     <tr style="background:var(--light-blue);">
-                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="196a7874706b597e74787075377a7674">[email&#160;protected]</a></td>
+                                        <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"></td>
                                         <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Samir</td>
                                     </tr>
                                     <tr>
-                                        <td style="padding:7px 12px;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4d2e21242823390d2e22203d2c2334632e2220">[email&#160;protected]</a></td>
+                                        <td style="padding:7px 12px;"></td>
                                         <td style="padding:7px 12px;">Client Name</td>
                                     </tr>
                                 </tbody>
@@ -1286,7 +1286,7 @@
         </div>
     </div>
     
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    <script>
         // User database
         // ⚠️ IMPORTANT SECURITY NOTICE ⚠️
         // ===========================================
@@ -1303,22 +1303,6 @@
         
         // ── Backend API Configuration ──────────────────────────────────────
         const API_BASE = 'https://mail.trugydex.in/api';
-
-        // Test backend connection on load
-        window.addEventListener('load', async function() {
-            try {
-                const r = await fetch(API_BASE + '/health');
-                const d = await r.json();
-                console.log('Backend OK:', d.message);
-            } catch(e) {
-                console.error('Backend UNREACHABLE:', e.message);
-                // Show visible warning
-                const warn = document.createElement('div');
-                warn.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ef4444;color:white;text-align:center;padding:10px;font-size:13px;font-weight:700;z-index:9999;';
-                warn.textContent = 'Backend connection failed: ' + e.message;
-                document.body.appendChild(warn);
-            }
-        });
 
         async function apiCall(endpoint, method, body, requiresAuth) {
             const headers = { 'Content-Type': 'application/json' };
@@ -1414,8 +1398,7 @@
                 loadDashboardData();
                 showLoginNotice('Welcome back, ' + data.user.name + '!', 'success');
             } catch(err) {
-                showLoginNotice(err.message || 'Connection failed. Check your internet.', 'error');
-                console.error('Login error:', err);
+                showLoginNotice(err.message, 'error');
             } finally {
                 if (btn) { btn.textContent = 'Login'; btn.disabled = false; }
             }
@@ -1444,8 +1427,7 @@
                 document.getElementById('loginPassword').value = password;
                 showLoginNotice('Account created! Awaiting admin approval before you can login.', 'success');
             } catch(err) {
-                showSignupNotice(err.message || 'Connection failed. Please try again.');
-                console.error('Signup error:', err);
+                showSignupNotice(err.message);
             } finally {
                 if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
             }
@@ -1470,22 +1452,15 @@
             if (!notice) {
                 notice = document.createElement('div');
                 notice.id = 'loginNotice';
-                notice.style.cssText = 'padding:12px 16px;border-radius:8px;margin-bottom:1rem;font-size:14px;font-weight:700;text-align:center;border:2px solid;';
+                notice.style.cssText = 'padding:10px 14px;border-radius:8px;margin-bottom:1rem;font-size:13px;font-weight:600;text-align:center;';
                 const loginForm = document.getElementById('loginForm');
                 loginForm.insertBefore(notice, loginForm.firstChild);
             }
             notice.textContent = msg;
-            if (type === 'success') {
-                notice.style.background = '#d1fae5';
-                notice.style.color = '#2E7D32';
-                notice.style.borderColor = '#2E7D32';
-            } else {
-                notice.style.background = '#fee2e2';
-                notice.style.color = '#ef4444';
-                notice.style.borderColor = '#ef4444';
-            }
+            notice.style.background = type === 'success' ? '#d1fae5' : '#fee2e2';
+            notice.style.color = type === 'success' ? '#2E7D32' : '#ef4444';
             notice.style.display = 'block';
-            setTimeout(() => { notice.style.display = 'none'; }, 8000);
+            setTimeout(() => { notice.style.display = 'none'; }, 5000);
         }
 
         function showDashboard() {
