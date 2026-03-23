@@ -683,10 +683,13 @@
                     '</td></tr></table>' +
                     '<p style="font-size:11px;color:#aaa;text-align:center;margin-top:12px;">&copy; 2026 Trugydex. All rights reserved.</p>';
 
+                // Auto prepend Dear {name} - replaced per recipient by server
+                var finalBody = 'Dear {name},<br><br>' + body.replace(/\n/g, '<br>');
+
                 const data = await apiCall('/email/send', 'POST', {
                     groupId: idx,
                     subject,
-                    body: body + signatureHtml,
+                    body: finalBody + signatureHtml,
                     campaignName: campaignName || 'Untitled Campaign'
                 }, true);
 

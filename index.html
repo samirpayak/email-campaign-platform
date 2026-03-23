@@ -994,16 +994,16 @@
                                     </tr>
                                 </thead>
                                 <tbody><tr style="background:var(--light-blue);">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="117469707c617d7451747c70787d3f727e7c">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Jay</td>
                                 </tr><tr style="background:white;">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4d28352c203d21280d28202c2421632e2220">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Sweetu</td>
                                 </tr><tr style="background:var(--light-blue);">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="34514c5559445851745159555d581a575b59">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Samir</td>
                                 </tr><tr style="background:white;">
-                                    <td style="padding:7px 12px;">example@email.com</td>
+                                    <td style="padding:7px 12px;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="85e0fde4e8f5e9e0c5e0e8e4ece9abe6eae8">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;">Client Name</td>
                                 </tr></tbody>
                             </table>
@@ -1152,10 +1152,10 @@
                         <div class="form-group">
                             <label class="form-label">Email Body</label>
                             <div style="background:#eff6ff;border-left:3px solid var(--primary-blue);padding:8px 12px;border-radius:4px;margin-bottom:8px;font-size:12px;color:var(--primary-blue);">
-        &#128161; <strong>Personalisation:</strong> Use <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{name}</code> for recipient name &nbsp;|&nbsp; <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{email}</code> for email address<br>
-        <em>Example: Dear {name}, We are writing to inform you...</em>
+        &#128161; <strong>Dear {name}</strong> is automatically added — just write your message body below.
+        <br>&#128276; Use <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{name}</code> anywhere in body for recipient name &nbsp;|&nbsp; <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{email}</code> for their email
     </div>
-    <textarea id="emailBody" placeholder="Dear {name},&#10;&#10;Write your message here...&#10;&#10;Regards,&#10;Trugydex Team"></textarea>
+    <textarea id="emailBody" placeholder="Write your message here...&#10;&#10;e.g. We are pleased to inform you about our latest compliance updates.&#10;&#10;Regards,&#10;Trugydex Team"></textarea>
                         </div>
 
                         <!-- Email Signature Editable -->
@@ -1185,7 +1185,7 @@
                                         <p id="sigPreviewName" style="margin:0;font-size:13px;font-weight:700;color:#003087;">Trugydex Compliance</p>
                                         <p id="sigPreviewTitle" style="margin:3px 0 0;font-size:11px;color:#666;">SAHI SALAH SUCHAN</p>
                                         <p id="sigPreviewPhone" style="margin:3px 0 0;font-size:11px;color:#666;display:none;"></p>
-                                        <p id="sigPreviewEmail" style="margin:3px 0 0;font-size:11px;color:#666;">trugydexcompliance@gmail.com</p>
+                                        <p id="sigPreviewEmail" style="margin:3px 0 0;font-size:11px;color:#666;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e7939592809e83829f84888a978b8e86898482a7808a868e8bc984888a">[email&#160;protected]</a></p>
                                         <p id="sigPreviewWebsite" style="margin:3px 0 0;font-size:11px;color:#666;">www.trugydex.in</p>
                                     </td>
                                 </tr></table>
@@ -1309,16 +1309,4 @@
 
                             <tbody id="userLogTableBody"></tbody>
                         </table>
-                    </div>
-                    <div style="margin-top:1rem;display:flex;gap:1.5rem;font-size:13px;color:var(--text-secondary);">
-                        <span>Total: <strong id="totalUsersCount2" style="color:var(--primary-blue);">&#8212;</strong></span>
-                        <span style="color:#ef4444;">Rejected: <strong id="rejectedUsersCount">0</strong></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
-    <script src="/app.js"></script>
-</body>
-</html>
+          
