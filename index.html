@@ -994,16 +994,16 @@
                                     </tr>
                                 </thead>
                                 <tbody><tr style="background:var(--light-blue);">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7a1f021b170a161f3a1f171b131654191517">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Jay</td>
                                 </tr><tr style="background:white;">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b0d5c8d1ddc0dcd5f0d5ddd1d9dc9ed3dfdd">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Sweetu</td>
                                 </tr><tr style="background:var(--light-blue);">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7b1e031a160b171e3b1e161a121755181416">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Samir</td>
                                 </tr><tr style="background:white;">
-                                    <td style="padding:7px 12px;">example@email.com</td>
+                                    <td style="padding:7px 12px;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="52372a333f223e3712373f333b3e7c313d3f">[email&#160;protected]</a></td>
                                     <td style="padding:7px 12px;">Client Name</td>
                                 </tr></tbody>
                             </table>
@@ -1166,7 +1166,7 @@
                                         <td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:16px;">
                                             <p style="margin:0;font-size:13px;font-weight:700;color:#003087;">Trugydex Compliance</p>
                                             <p style="margin:3px 0 0;font-size:11px;color:#666;">SAHI SALAH SUCHAN</p>
-                                            <p style="margin:3px 0 0;font-size:11px;color:#666;">example@email.com</p>
+                                            <p style="margin:3px 0 0;font-size:11px;color:#666;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="90f5e8f1fde0fcf5d0f5fdf1f9fcbef3fffd">[email&#160;protected]</a></p>
                                             <p style="margin:3px 0 0;font-size:11px;color:#666;">www.trugydex.in</p>
                                         </td>
                                     </tr>
@@ -1301,7 +1301,7 @@
         </div>
     </div>
     
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // User database
         // ⚠️ IMPORTANT SECURITY NOTICE ⚠️
         // ===========================================
@@ -2045,19 +2045,40 @@
                 campaigns = campData.campaigns;
                 const history = document.getElementById('campaignHistory');
                 if (campaigns.length === 0) {
-                    history.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No campaigns sent yet</p>';
                 } else {
                     history.innerHTML = campaigns.map(c => `
                         <div class="recent-item">
                             <strong>${c.name}</strong>
                             <p>📧 Subject: ${c.subject}</p>
-                            <p>👥 Group: ${c.groupName} &bull; ${c.recipientCount} recip                        }
-                    </div>
-                `).join('');
+                            <p>👥 Group: ${c.groupName} &bull; ${c.recipientCount} recipients</p>
+                            <p>📎 Attachments: ${c.attachments && c.attachments.length > 0 ? c.attachments.join(', ') : 'None'}</p>
+                            <p>🕐 Sent: ${new Date(c.sentAt).toLocaleString()}</p>
+                        </div>
+                    \`).join('');
+                }
+
+                // Update pending badge for admin
+                if (currentUser && currentUser.role === 'Administrator') {
+                    try {
+                        const userData = await apiCall('/users', 'GET', null, true);
+                        updatePendingBadgeCount(userData.stats.pending);
+                    } catch(e) {}
                 }
             } catch(err) {
                 console.error('Dashboard load error:', err.message);
             }
+        }
+
+        function downloadSampleCSV() {
+            const csvContent = "Email,Name\njay@gmail.com,Jay\nsweetu@gmail.com,Sweetu\nsamir@gmail.com,Samir\nclient@company.com,Client Name\n";
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trugydex_sample_emails.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
     </script>
 </body>
 </html>
