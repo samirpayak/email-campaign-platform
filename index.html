@@ -994,16 +994,16 @@
                                     </tr>
                                 </thead>
                                 <tbody><tr style="background:var(--light-blue);">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="eb8e938a869b878eab8e868a8287c5888486">[email&#160;protected]</a></td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Jay</td>
                                 </tr><tr style="background:white;">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="204558414d504c4560454d41494c0e434f4d">[email&#160;protected]</a></td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Sweetu</td>
                                 </tr><tr style="background:var(--light-blue);">
-                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e6839e878b968a83a6838b878f8ac885898b">[email&#160;protected]</a></td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
                                     <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Samir</td>
                                 </tr><tr style="background:white;">
-                                    <td style="padding:7px 12px;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="17726f767a677b7257727a767e7b3974787a">[email&#160;protected]</a></td>
+                                    <td style="padding:7px 12px;">example@email.com</td>
                                     <td style="padding:7px 12px;">Client Name</td>
                                 </tr></tbody>
                             </table>
@@ -1152,55 +1152,43 @@
                         <div class="form-group">
                             <label class="form-label">Email Body</label>
                             <div style="background:#eff6ff;border-left:3px solid var(--primary-blue);padding:8px 12px;border-radius:4px;margin-bottom:8px;font-size:12px;color:var(--primary-blue);">
-                                💡 <strong>Personalisation:</strong> Use <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{name}</code> to insert recipient name &nbsp;|&nbsp; <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{email}</code> to insert recipient email
-                                <br>Example: <em>Dear {name}, We are writing to inform you...</em>
-                            </div>
-                            <textarea id="emailBody" placeholder="Dear {name},&#10;&#10;Write your message here...&#10;&#10;Regards,&#10;Trugydex Team"></textarea>
+        &#128161; <strong>Personalisation:</strong> Use <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{name}</code> for recipient name &nbsp;|&nbsp; <code style="background:white;padding:1px 6px;border-radius:3px;font-weight:700;">{email}</code> for email address<br>
+        <em>Example: Dear {name}, We are writing to inform you...</em>
+    </div>
+    <textarea id="emailBody" placeholder="Dear {name},&#10;&#10;Write your message here...&#10;&#10;Regards,&#10;Trugydex Team"></textarea>
                         </div>
 
-                        <!-- Email Signature - Editable -->
+                        <!-- Email Signature Editable -->
                         <div class="form-group">
                             <label class="form-label">&#9999;&#65039; Email Signature <span style="font-size:11px;color:var(--text-secondary);font-weight:400;">(editable — auto added to every email)</span></label>
                             <div style="background:#f8f9fa;border:2px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:10px;">
                                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                                    <div>
-                                        <label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Name</label>
-                                        <input type="text" id="sigName" value="Trugydex Compliance" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" />
-                                    </div>
-                                    <div>
-                                        <label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Title</label>
-                                        <input type="text" id="sigTitle" value="SAHI SALAH SUCHAN" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" />
-                                    </div>
+                                    <div><label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Name</label>
+                                    <input type="text" id="sigName" value="Trugydex Compliance" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" /></div>
+                                    <div><label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Title</label>
+                                    <input type="text" id="sigTitle" value="SAHI SALAH SUCHAN" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" /></div>
                                 </div>
                                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                                    <div>
-                                        <label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Email</label>
-                                        <input type="text" id="sigEmail" value="trugydexcompliance@gmail.com" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" />
-                                    </div>
-                                    <div>
-                                        <label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Website</label>
-                                        <input type="text" id="sigWebsite" value="www.trugydex.in" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" />
-                                    </div>
+                                    <div><label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Email</label>
+                                    <input type="text" id="sigEmail" value="trugydexcompliance@gmail.com" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" /></div>
+                                    <div><label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Website</label>
+                                    <input type="text" id="sigWebsite" value="www.trugydex.in" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" /></div>
                                 </div>
-                                <div>
-                                    <label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Phone (optional)</label>
-                                    <input type="text" id="sigPhone" placeholder="+91 98765 43210" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" />
-                                </div>
+                                <div><label style="font-size:11px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;display:block;margin-bottom:4px;">Phone (optional)</label>
+                                <input type="text" id="sigPhone" placeholder="+91 98765 43210" oninput="updateSignaturePreview()" style="padding:8px 10px;font-size:13px;" /></div>
                             </div>
                             <div style="border:2px solid var(--border-color);border-radius:8px;padding:14px;background:#fff;">
                                 <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:10px;">Live Preview</div>
-                                <table style="width:100%;border-top:2px solid #003087;padding-top:12px;">
-                                    <tr>
-                                        <td style="vertical-align:middle;padding-right:14px;width:110px;"><img src="/logo.png" alt="Trugydex" style="width:100px;height:auto;" /></td>
-                                        <td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:14px;">
-                                            <p id="sigPreviewName" style="margin:0;font-size:13px;font-weight:700;color:#003087;">Trugydex Compliance</p>
-                                            <p id="sigPreviewTitle" style="margin:3px 0 0;font-size:11px;color:#666;">SAHI SALAH SUCHAN</p>
-                                            <p id="sigPreviewPhone" style="margin:3px 0 0;font-size:11px;color:#666;display:none;"></p>
-                                            <p id="sigPreviewEmail" style="margin:3px 0 0;font-size:11px;color:#666;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e7939592809e83829f84888a978b8e86898482a7808a868e8bc984888a">[email&#160;protected]</a></p>
-                                            <p id="sigPreviewWebsite" style="margin:3px 0 0;font-size:11px;color:#666;">www.trugydex.in</p>
-                                        </td>
-                                    </tr>
-                                </table>
+                                <table style="width:100%;border-top:2px solid #003087;padding-top:12px;"><tr>
+                                    <td style="vertical-align:middle;padding-right:14px;width:110px;"><img src="/logo.png" alt="Trugydex" style="width:100px;height:auto;" /></td>
+                                    <td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:14px;">
+                                        <p id="sigPreviewName" style="margin:0;font-size:13px;font-weight:700;color:#003087;">Trugydex Compliance</p>
+                                        <p id="sigPreviewTitle" style="margin:3px 0 0;font-size:11px;color:#666;">SAHI SALAH SUCHAN</p>
+                                        <p id="sigPreviewPhone" style="margin:3px 0 0;font-size:11px;color:#666;display:none;"></p>
+                                        <p id="sigPreviewEmail" style="margin:3px 0 0;font-size:11px;color:#666;">trugydexcompliance@gmail.com</p>
+                                        <p id="sigPreviewWebsite" style="margin:3px 0 0;font-size:11px;color:#666;">www.trugydex.in</p>
+                                    </td>
+                                </tr></table>
                             </div>
                         </div>
                         <!-- Attachment Section -->
@@ -1318,19 +1306,19 @@
                                     <th style="width:16%;">Action</th>
                                 </tr>
                             </thead>
+
                             <tbody id="userLogTableBody"></tbody>
                         </table>
                     </div>
                     <div style="margin-top:1rem;display:flex;gap:1.5rem;font-size:13px;color:var(--text-secondary);">
-                        <span>Total: <strong id="totalUsersCount2" style="color:var(--primary-blue);">—</strong></span>
+                        <span>Total: <strong id="totalUsersCount2" style="color:var(--primary-blue);">&#8212;</strong></span>
                         <span style="color:#ef4444;">Rejected: <strong id="rejectedUsersCount">0</strong></span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    
-                            <tbody id="userLogTableBody"></tbody>
-                        </table>
-      
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>
