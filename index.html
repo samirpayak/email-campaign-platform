@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Professional Email Campaign Manager - Send bulk emails with ease">
+    <meta name="theme-color" content="#003087">
+    <title>Email Campaign Manager - Trugydex</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-blue: #003087;
+            --primary-green: #2E7D32;
+            --secondary-blue: #1a4a8f;
+            --light-blue: #f0f4f9;
+            --light-green: #f1f8f4;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --border-color: #e0e0e0;
+            --success-color: #2E7D32;
+            --error-color: #ef4444;
+        }
+        
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #f8f9fa;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        /* Login Screen */
+        .login-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 48, 135, 0.2);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-header p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .login-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .login-tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .login-tab-btn.active {
+            color: var(--primary-blue);
+            border-bottom-color: var(--primary-blue);
+        }
+        
+        .login-form {
+            display: none;
+        }
+        
+        .login-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--primary-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(0, 48, 135, 0.1);
+            background: var(--light-blue);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        input[type="file"] {
+            padding: 10px;
+        }
+        
+        .button-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .button-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 48, 135, 0.3);
+        }
+        
+        .demo-users {
+            background: var(--light-green);
+            border-left: 4px solid var(--primary-green);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 2rem;
+            font-size: 12px;
+        }
+        
+        .demo-users strong {
+            display: block;
+            color: var(--primary-green);
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        
+        .demo-user {
+            margin: 6px 0;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .demo-user:hover {
+            background: white;
+        }
+        
+        /* Dashboard */
+        .dashboard {
+            background: white;
+            min-height: 100vh;
+            display: none;
+        }
+        
+        .dashboard.active {
+            display: block;
+        }
+        
+        .top-bar {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .top-bar-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .top-bar-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(46, 125, 50, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        
+        .user-info {
+            font-size: 13px;
+        }
+        
+        .user-info .name {
+            font-weight: 600;
+        }
+        
+        .user-info .role {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        
+        .logout-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: white;
+            color: var(--primary-blue);
+            border-color: white;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            padding: 2.5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(46, 125, 50, 0.1);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header-text h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+        
+        .header-text p {
+            font-size: 15px;
+            opacity: 0.95;
+            max-width: 500px;
+        }
+        
+        .container {
+            padding: 0 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding-bottom: 2rem;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 2rem;
+            background: white;
+            margin: 0 -2rem 2rem -2rem;
+            padding: 0 2rem;
+            overflow-x: auto;
+        }
+        
+        .nav-tab {
+            padding: 16px 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .nav-tab:hover {
+            color: var(--primary-blue);
+        }
+        
+        .nav-tab.active {
+            color: var(--primary-blue);
+            border-bottom-color: var(--primary-blue);
+        }
+        
+        .tab-panel {
+            display: none;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--primary-blue);
+            border-bottom: 2px solid var(--light-blue);
+            padding-bottom: 1rem;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--light-blue) 0%, var(--light-green) 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 2px solid var(--border-color);
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .stat-value {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+        
+        .alert {
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 13px;
+            border-left: 4px solid;
+        }
+        
+        .alert-info {
+            background: #eff6ff;
+            color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+        
+        .alert strong {
+            font-weight: 700;
+        }
+        
+        /* Upload Zone */
+        .upload-zone {
+            border: 3px dashed var(--primary-blue);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--light-blue);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+        
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            background: linear-gradient(135deg, var(--light-blue) 0%, var(--light-green) 100%);
+            border-color: var(--primary-green);
+            transform: scale(1.02);
+        }
+        
+        .upload-zone-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-zone-text h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary-blue);
+        }
+        
+        .upload-zone-text p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .upload-zone-formats {
+            display: inline-block;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--primary-green);
+            font-weight: 600;
+        }
+        
+        /* Preview Table */
+        .preview-table-container {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .preview-table thead {
+            background: var(--light-blue);
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+        }
+        
+        .preview-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+        
+        .preview-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .preview-table tbody tr:hover {
+            background: var(--light-blue);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        
+        .status-valid {
+            background: #d1fae5;
+            color: var(--primary-green);
+        }
+        
+        .status-invalid {
+            background: #fee2e2;
+            color: var(--error-color);
+        }
+        
+        .button {
+            padding: 12px 24px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .button:hover {
+            background: var(--light-blue);
+            border-color: var(--primary-blue);
+        }
+        
+        .button-primary {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 48, 135, 0.3);
+        }
+        
+        .button-success {
+            background: linear-gradient(135deg, var(--primary-green) 0%, #1b5e20 100%);
+            color: white;
+            border: none;
+        }
+        
+        .button-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(46, 125, 50, 0.3);
+        }
+        
+        .button-danger {
+            background: var(--error-color);
+            color: white;
+            border: none;
+        }
+        
+        .recent-item {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: var(--light-blue);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-green);
+        }
+        
+        .recent-item strong {
+            font-size: 14px;
+            color: var(--primary-blue);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .recent-item p {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin: 2px 0;
+        }
+        
+        .file-info {
+            background: var(--light-green);
+            border-left: 4px solid var(--primary-green);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        
+        .file-info.show {
+            display: block;
+        }
+        
+        .file-info strong {
+            color: var(--primary-green);
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--light-blue);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-item-value {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+        
+        .stat-item-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-top: 4px;
+        }
+        
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .header-text h1 {
+                font-size: 2rem;
+            }
+        }
+        
+
+        /* Attachment Styles */
+        .attachment-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .attachment-zone:hover,
+        .attachment-zone.dragover {
+            background: var(--light-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .attachment-zone-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .attachment-zone p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .attachment-zone strong {
+            color: var(--primary-blue);
+            font-size: 14px;
+        }
+
+        .attachment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--light-blue);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+
+        .attachment-item-icon {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .attachment-item-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .attachment-item-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .attachment-item-size {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .attachment-remove-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            color: var(--error-color);
+            flex-shrink: 0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .attachment-remove-btn:hover {
+            background: #fee2e2;
+        }
+
+        .attachment-summary {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .attachment-summary span {
+            color: var(--primary-green);
+            font-weight: 700;
+        }
+
+        .attachment-formats {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        @media (max-width: 640px) {
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            .login-card {
+                padding: 2rem;
+            }
+            .header {
+                padding: 1.5rem 1rem;
+            }
+            .top-bar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .top-bar-left,
+            .top-bar-user {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1 style="font-size:16px; color: var(--text-secondary); font-family: 'DM Sans', sans-serif; font-weight:500; letter-spacing:1px;">EMAIL CAMPAIGN MANAGER</h1>
+            </div>
+            
+            <div style="text-align:center; margin-bottom: 2rem;">
+                <img src="/logo.png" alt="Trugydex Logo" style="max-width: 220px; width: 100%; height: auto;" />
+            </div>
+            
+            <div class="login-tabs">
+                <button class="login-tab-btn active" onclick="switchLoginTab('login', this)">Login</button>
+                <button class="login-tab-btn" onclick="switchLoginTab('signup', this)">Signup</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form class="login-form active" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="loginEmail" placeholder="Enter your User ID" required />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required />
+                </div>
+                
+                <button type="submit" class="button-login">Login</button>
+            </form>
+            
+            <!-- Signup Form -->
+            <form class="login-form" id="signupForm" onsubmit="handleSignup(event)">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="signupName" placeholder="Your Full Name" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="signupEmail" placeholder="Enter your User ID e.g. EMP001" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="signupPassword" placeholder="Min 6 characters" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" id="signupConfirm" placeholder="Confirm password" required />
+                </div>
+                <button type="submit" class="button-login">Create Account</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Dashboard -->
+    <div id="dashboardScreen" class="dashboard">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <div class="top-bar-logo"><img src="/logo.png" alt="Trugydex" style="height:36px; width:auto; vertical-align:middle; filter: brightness(0) invert(1);" /></div>
+            </div>
+            <div class="top-bar-user">
+                <div class="user-avatar" id="userInitials">A</div>
+                <div class="user-info">
+                    <div class="name" id="currentUserName">Admin</div>
+                    <div class="role" id="currentUserRole">Administrator</div>
+                </div>
+                <button class="logout-btn" onclick="handleLogout()">Logout</button>
+            </div>
+        </div>
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>Welcome to Campaign Manager</h1>
+                    <p>Upload email lists, send bulk campaigns, and track results</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="container">
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('dashboard')">Dashboard</button>
+                <button class="nav-tab" onclick="switchTab('upload')">📥 Bulk Upload</button>
+                <button class="nav-tab" onclick="switchTab('compose')">Send Email</button>
+                <button class="nav-tab" onclick="switchTab('history')">History</button>
+                <button class="nav-tab" id="userLogTab" onclick="switchTab('userlog')" style="display:none;">👥 User Log <span id="pendingBadge" style="display:none;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px;vertical-align:middle;">0</span></button>
+            </div>
+            
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-panel active">
+                <div class="grid-3">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Groups</div>
+                        <div class="stat-value" id="totalGroups">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Recipients</div>
+                        <div class="stat-value" id="totalRecipients">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Emails Sent</div>
+                        <div class="stat-value" id="emailsSent">0</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Quick Start Guide</div>
+                    <div class="alert alert-info">
+                        <strong>Getting Started:</strong><br>
+                        1️⃣ Go to "Bulk Upload" tab<br>
+                        2️⃣ Upload CSV or Excel file with emails<br>
+                        3️⃣ Create a group from the uploaded list<br>
+                        4️⃣ Go to "Send Email" tab<br>
+                        5️⃣ Select group and write message<br>
+                        6️⃣ Click "Send Campaign"
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Recent Groups</div>
+                    <div id="recentActivity">
+                        <p style="color: var(--text-secondary); font-size: 14px;">No groups created yet. Start by uploading emails!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bulk Upload Tab -->
+            <div id="upload" class="tab-panel">
+
+                <!-- File Format Guide -->
+                <div style="background:#fff;border:2px solid var(--border-color);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+                    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--primary-blue);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:2px solid var(--light-blue);">
+                        📋 How to Prepare Your Email List
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+
+                        <!-- Step by step -->
+                        <div>
+                            <div style="font-size:13px;font-weight:700;color:var(--primary-blue);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Step by Step</div>
+                            <div style="font-size:13px;color:var(--text-primary);line-height:2;">
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">1️⃣ &nbsp;Open <strong>Microsoft Excel</strong> or <strong>Google Sheets</strong></div>
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">2️⃣ &nbsp;In <strong>Row 1</strong> type: &nbsp;<code style="background:#f0f4f9;padding:2px 8px;border-radius:4px;color:var(--primary-blue);">Email</code> &nbsp;in column A, &nbsp;<code style="background:#f0f4f9;padding:2px 8px;border-radius:4px;color:var(--primary-blue);">Name</code> &nbsp;in column B</div>
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">3️⃣ &nbsp;From <strong>Row 2</strong> onwards — enter email addresses and names</div>
+                                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);">4️⃣ &nbsp;Save as <strong>.csv</strong> or <strong>.xlsx</strong></div>
+                                <div style="padding:6px 0;">5️⃣ &nbsp;Upload the file here</div>
+                            </div>
+                        </div>
+
+                        <!-- Example table -->
+                        <div>
+                            <div style="font-size:13px;font-weight:700;color:var(--primary-blue);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">Example File Format</div>
+                            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                                <thead>
+                                    <tr style="background:var(--primary-blue);color:white;">
+                                        <th style="padding:8px 12px;text-align:left;border-radius:4px 0 0 0;">Email</th>
+                                        <th style="padding:8px 12px;text-align:left;border-radius:0 4px 0 0;">Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody><tr style="background:var(--light-blue);">
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Jay</td>
+                                </tr><tr style="background:white;">
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Sweetu</td>
+                                </tr><tr style="background:var(--light-blue);">
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">example@email.com</td>
+                                    <td style="padding:7px 12px;border-bottom:1px solid var(--border-color);">Samir</td>
+                                </tr><tr style="background:white;">
+                                    <td style="padding:7px 12px;">example@email.com</td>
+                                    <td style="padding:7px 12px;">Client Name</td>
+                                </tr></tbody>
+                            </table>
+
+                            <!-- Download sample -->
+                            <button onclick="downloadSampleCSV()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,var(--primary-green),#1b5e20);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.5px;">
+                                ⬇️ Download Sample CSV File
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Important rules -->
+                    <div style="margin-top:1rem;padding:12px;background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;font-size:12px;">
+                        <strong style="color:#92400e;">⚠️ Important Rules:</strong>
+                        <span style="color:#78350f;">
+                            &nbsp;• First row MUST have headers (Email, Name) &nbsp;|&nbsp;
+                            Email must contain @ and . &nbsp;|&nbsp;
+                            Supported formats: CSV, XLSX, XLS &nbsp;|&nbsp;
+                            Max 500 emails per file recommended
+                        </span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>📁 Upload Email Lists:</strong> Drag & drop or click to upload CSV/Excel files. Supported formats: .csv, .xlsx, .xls
+                </div>
+                
+                <div class="grid-2">
+                    <!-- Upload Section -->
+                    <div class="card">
+                        <div class="card-title">Import Email List</div>
+                        
+                        <div class="upload-zone" id="uploadZone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="document.getElementById('fileInput').click()">
+                            <div class="upload-zone-icon">📁</div>
+                            <div class="upload-zone-text">
+                                <h3>Drag & drop your file here</h3>
+                                <p>or click to browse</p>
+                                <div class="upload-zone-formats">CSV • XLSX • XLS</div>
+                            </div>
+                        </div>
+                        
+                        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;" onchange="handleFileSelect(event)" />
+                        
+                        <div id="fileInfo" class="file-info">
+                            <strong>📄 File Loaded:</strong>
+                            <p>Name: <strong id="fileName"></strong></p>
+                            <p>Rows: <strong id="rowCount">0</strong></p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email Column Name</label>
+                            <select id="emailColumn" onchange="showUploadPreview()">
+                                <option value="">Auto-detect email column...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Name Column (Optional)</label>
+                            <select id="nameColumn" onchange="showUploadPreview()">
+                                <option value="">No name column</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Group Name</label>
+                            <input type="text" id="uploadGroupName" placeholder="e.g., Q1 Marketing List" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <input type="text" id="uploadGroupDesc" placeholder="Optional description" />
+                        </div>
+                        
+                        <button class="button button-primary" onclick="createGroupFromUpload()" style="width: 100%; padding: 12px;">Create Group from Upload</button>
+                    </div>
+                    
+                    <!-- Preview Section -->
+                    <div class="card">
+                        <div class="card-title">Preview</div>
+                        
+                        <div id="previewEmpty" style="color: var(--text-secondary); font-size: 14px; text-align: center; padding: 2rem;">
+                            <p style="font-size: 3rem; margin-bottom: 1rem;">📋</p>
+                            <p>Upload a file to see preview</p>
+                        </div>
+                        
+                        <div id="previewData" style="display: none;">
+                            <div class="stats-container">
+                                <div class="stat-item">
+                                    <div class="stat-item-value" id="previewValidCount">0</div>
+                                    <div class="stat-item-label">Valid Emails</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-item-value" id="previewInvalidCount">0</div>
+                                    <div class="stat-item-label">Invalid Emails</div>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-table-container">
+                                <div class="table-header">
+                                    Email Preview (First 10 rows)
+                                </div>
+                                <table class="preview-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40%;">Email</th>
+                                            <th style="width: 40%;">Name</th>
+                                            <th style="width: 20%;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compose Tab -->
+            <div id="compose" class="tab-panel">
+                <div class="alert alert-info">
+                    <strong>Pro Tip:</strong> Upload email lists first in "Bulk Upload" tab, then select them here to send campaigns.
+                </div>
+                
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">Campaign Configuration</div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Select Recipient Group</label>
+                            <select id="selectGroup" onchange="updateGroupPreview()">
+                                <option value="">Choose a group...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Campaign Name</label>
+                            <input type="text" id="campaignName" placeholder="e.g., Q1 Newsletter" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Subject Line</label>
+                            <input type="text" id="emailSubject" placeholder="Enter subject" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email Body</label>
+                            <textarea id="emailBody" placeholder="Write your message here..."></textarea>
+                        </div>
+
+                        <!-- Email Signature Preview -->
+                        <div class="form-group">
+                            <label class="form-label">Email Signature <span style="font-size:11px;color:var(--text-secondary);font-weight:400;">(automatically added to every email)</span></label>
+                            <div id="signaturePreview" style="border:2px solid var(--border-color);border-radius:8px;padding:16px;background:#fafafa;">
+                                <table style="width:100%;border-top:2px solid #003087;padding-top:12px;">
+                                    <tr>
+                                        <td style="vertical-align:middle;padding-right:16px;width:120px;">
+                                            <img src="/logo.png" alt="Trugydex" style="width:110px;height:auto;" />
+                                        </td>
+                                        <td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:16px;">
+                                            <p style="margin:0;font-size:13px;font-weight:700;color:#003087;">Trugydex Compliance</p>
+                                            <p style="margin:3px 0 0;font-size:11px;color:#666;">SAHI SALAH SUCHAN</p>
+                                            <p style="margin:3px 0 0;font-size:11px;color:#666;">example@email.com</p>
+                                            <p style="margin:3px 0 0;font-size:11px;color:#666;">www.trugydex.in</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Attachment Section -->
+                        <div class="form-group">
+                            <label class="form-label">📎 Attachments</label>
+                            <div class="attachment-zone" id="attachmentZone"
+                                ondrop="handleAttachmentDrop(event)"
+                                ondragover="handleAttachmentDragOver(event)"
+                                ondragleave="handleAttachmentDragLeave(event)"
+                                onclick="document.getElementById('attachmentInput').click()">
+                                <div class="attachment-zone-icon">📎</div>
+                                <p><strong>Click or drag & drop files here</strong></p>
+                                <p style="margin-top: 4px;">Max 5 files • 10 MB each</p>
+                            </div>
+                            <input type="file" id="attachmentInput" multiple
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.zip,.ppt,.pptx"
+                                style="display:none;" onchange="handleAttachmentSelect(event)" />
+                            <div class="attachment-formats">
+                                Supported: PDF, Word, Excel, CSV, Images, ZIP, PPT, TXT
+                            </div>
+
+                            <div class="attachment-list" id="attachmentList" style="margin-top: 12px;"></div>
+
+                            <div id="attachmentSummary" style="display:none;" class="attachment-summary">
+                                <span id="attachmentCountText">0 file(s) attached</span>
+                                <span id="attachmentSizeText">0 KB total</span>
+                                <button onclick="clearAllAttachments()" style="background:none;border:none;color:var(--error-color);cursor:pointer;font-size:12px;font-weight:600;">✕ Clear All</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Send Delay (seconds)</label>
+                            <input type="number" id="sendDelay" value="2" min="1" max="30" />
+                            <small style="color: var(--text-secondary); font-size: 12px; margin-top: 6px; display: block;">Recommended: 2-5 seconds</small>
+                        </div>
+                        
+                        <button class="button-login" onclick="sendEmail()" style="width: 100%; padding: 14px;">Send Campaign</button>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-title">Campaign Preview</div>
+                        
+                        <div style="background: linear-gradient(135deg, var(--light-blue) 0%, var(--light-green) 100%); border-radius: 10px; padding: 1.5rem; border: 2px solid var(--primary-blue);">
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-size: 11px; color: var(--primary-blue); font-weight: 700; text-transform: uppercase;">Recipients:</div>
+                                <div style="font-size: 13px; margin-top: 6px; color: var(--text-primary); padding: 8px 12px; background: white; border-radius: 6px;" id="previewRecipients">No group selected</div>
+                            </div>
+                            
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-size: 11px; color: var(--primary-blue); font-weight: 700; text-transform: uppercase;">Subject:</div>
+                                <div style="font-size: 13px; margin-top: 6px; color: var(--text-primary); padding: 8px 12px; background: white; border-radius: 6px;" id="previewSubject">-</div>
+                            </div>
+                            
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-size: 11px; color: var(--primary-blue); font-weight: 700; text-transform: uppercase;">Sample Email:</div>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5; max-height: 150px; overflow-y: auto; white-space: pre-wrap; background: white; padding: 12px; border-radius: 6px;" id="previewBody">-</div>
+                            </div>
+                            
+                            <div>
+                                <div style="font-size: 11px; color: var(--primary-blue); font-weight: 700; text-transform: uppercase;">Estimated Send Time:</div>
+                                <div style="font-size: 13px; margin-top: 6px; color: var(--text-primary); padding: 8px 12px; background: white; border-radius: 6px;" id="estimatedTime">-</div>
+                            </div>
+
+                            <div style="margin-top: 16px;">
+                                <div style="font-size: 11px; color: var(--primary-blue); font-weight: 700; text-transform: uppercase;">Attachments:</div>
+                                <div style="font-size: 13px; margin-top: 6px; color: var(--text-primary); padding: 8px 12px; background: white; border-radius: 6px;" id="previewAttachments">None</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Tab -->
+            <div id="history" class="tab-panel">
+                <div class="card">
+                    <div class="card-title">Campaign History</div>
+                    <div id="campaignHistory">
+                        <p style="color: var(--text-secondary); font-size: 14px;">No campaigns sent yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Log Tab (Admin Only) -->
+            <div id="userlog" class="tab-panel">
+                <div class="grid-3" style="margin-bottom:1.5rem;">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value" id="totalUsersCount">0</div>
+                    </div>
+                    <div class="stat-card" style="border:2px solid #fbbf24;">
+                        <div class="stat-label" style="color:#92400e;">⏳ Pending Approval</div>
+                        <div class="stat-value" style="color:#92400e;" id="pendingUsersCount">0</div>
+                    </div>
+                    <div class="stat-card" style="border:2px solid #d1fae5;">
+                        <div class="stat-label">✓ Approved</div>
+                        <div class="stat-value" id="approvedUsersCount">0</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">👥 User Access Management</div>
+                    <div class="alert alert-info" style="margin-bottom:1.5rem;">
+                        <strong>Admin Control:</strong> Approve or reject user access. Pending users cannot login until approved. Revoking access immediately blocks the user.
+                    </div>
+                    <div class="preview-table-container" style="max-height:500px;">
+                        <div class="table-header">User Registry</div>
+                        <table class="preview-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:4%;">#</th>
+                                    <th style="width:18%;">Full Name</th>
+                                    <th style="width:24%;">Email</th>
+                                    <th style="width:12%;">Role</th>
+                                    <th style="width:10%;">Status</th>
+                                    <th style="width:16%;">Registered</th>
+                                    <th style="width:16%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userLogTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:1rem;display:flex;gap:1.5rem;font-size:13px;color:var(--text-secondary);">
+                        <span>Total: <strong id="totalUsersCount2" style="color:var(--primary-blue);">—</strong></span>
+                        <span style="color:#ef4444;">Rejected: <strong id="rejectedUsersCount">0</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // User database
+        // ⚠️ IMPORTANT SECURITY NOTICE ⚠️
+        // ===========================================
+        // DO NOT hardcode credentials in HTML!
+        // This is a SECURITY VULNERABILITY
+        // 
+        // PRODUCTION SETUP REQUIRED:
+        // 1. Use a backend server for authentication
+        // 2. Store passwords in a secure database (bcrypt hashed)
+        // 3. Use environment variables for secrets
+        // 4. Never expose credentials in client-side code
+        // 5. Implement proper session management on server
+        // ===========================================
+        
+        // ── Backend API Configuration ──────────────────────────────────────
+        const API_BASE = 'https://mail.trugydex.in/api';
+
+        async function apiCall(endpoint, method, body, requiresAuth) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (requiresAuth) {
+                const token = localStorage.getItem('tg_token');
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+            }
+            const res = await fetch(API_BASE + endpoint, {
+                method: method || 'GET',
+                headers,
+                body: body ? JSON.stringify(body) : undefined
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Request failed');
+            return data;
+        }
+
+        let currentUser = null;
+        
+        // ─── Session Persistence (JWT based) ────────────────────────────
+        function saveSession(token, user) {
+            localStorage.setItem('tg_token', token);
+            localStorage.setItem('tg_user', JSON.stringify(user));
+        }
+
+        function loadSession() {
+            const user = localStorage.getItem('tg_user');
+            return user ? JSON.parse(user) : null;
+        }
+
+        function clearSession() {
+            localStorage.removeItem('tg_token');
+            localStorage.removeItem('tg_user');
+        }
+
+        // Check if user is already logged in on page load
+        window.addEventListener('load', async function() {
+            const token = localStorage.getItem('tg_token');
+            const savedUser = loadSession();
+            if (token && savedUser) {
+                try {
+                    const data = await apiCall('/auth/verify', 'POST', null, true);
+                    if (data.success) {
+                        currentUser = savedUser;
+                        showDashboard();
+                        loadDashboardData();
+                    } else {
+                        clearSession();
+                    }
+                } catch(e) {
+                    clearSession();
+                }
+            }
+        });
+        let campaigns = [];
+        let groups = [];
+        let uploadedData = [];
+        let columns = [];
+        
+        function switchLoginTab(tab, clickedBtn) {
+            document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+            document.querySelectorAll('.login-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab === 'login' ? 'loginForm' : 'signupForm').classList.add('active');
+            if (clickedBtn) {
+                clickedBtn.classList.add('active');
+            } else {
+                document.querySelectorAll('.login-tab-btn').forEach(b => {
+                    if ((tab === 'login' && b.textContent.trim() === 'Login') ||
+                        (tab === 'signup' && b.textContent.trim() === 'Signup')) {
+                        b.classList.add('active');
+                    }
+                });
+            }
+        }
+        
+        function setDemoUser(email, password) {
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = password;
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const btn = e.target.querySelector('button[type="submit"]') || document.querySelector('#loginForm .button-login');
+            if (btn) { btn.textContent = 'Logging in...'; btn.disabled = true; }
+
+            try {
+                const data = await apiCall('/auth/login', 'POST', { email, password });
+                saveSession(data.token, data.user);
+                currentUser = data.user;
+                showDashboard();
+                loadDashboardData();
+                showLoginNotice('Welcome back, ' + data.user.name + '!', 'success');
+            } catch(err) {
+                showLoginNotice(err.message, 'error');
+            } finally {
+                if (btn) { btn.textContent = 'Login'; btn.disabled = false; }
+            }
+        }
+        
+        async function handleSignup(e) {
+            e.preventDefault();
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const confirm = document.getElementById('signupConfirm').value;
+
+            if (!name) { showSignupNotice('Please enter your full name.'); return; }
+            if (!email || email.length < 3) { showSignupNotice('Please enter a valid User ID (minimum 3 characters).'); return; }
+            if (password.length < 6) { showSignupNotice('Password must be at least 6 characters.'); return; }
+            if (password !== confirm) { showSignupNotice('Passwords do not match.'); return; }
+
+            const btn = document.querySelector('#signupForm .button-login');
+            if (btn) { btn.textContent = 'Creating account...'; btn.disabled = true; }
+
+            try {
+                await apiCall('/auth/signup', 'POST', { name, email, password });
+                document.getElementById('signupForm').reset();
+                switchLoginTab('login');
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('loginPassword').value = password;
+                showLoginNotice('Account created! Awaiting admin approval before you can login.', 'success');
+            } catch(err) {
+                showSignupNotice(err.message);
+            } finally {
+                if (btn) { btn.textContent = 'Create Account'; btn.disabled = false; }
+            }
+        }
+
+        function showSignupNotice(msg) {
+            let el = document.getElementById('signupNotice');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'signupNotice';
+                el.style.cssText = 'padding:10px 14px;border-radius:8px;margin-bottom:1rem;font-size:13px;font-weight:600;text-align:center;background:#fee2e2;color:#ef4444;';
+                const form = document.getElementById('signupForm');
+                form.insertBefore(el, form.firstChild);
+            }
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function(){ el.style.display = 'none'; }, 4000);
+        }
+        
+        function showLoginNotice(msg, type) {
+            let notice = document.getElementById('loginNotice');
+            if (!notice) {
+                notice = document.createElement('div');
+                notice.id = 'loginNotice';
+                notice.style.cssText = 'padding:10px 14px;border-radius:8px;margin-bottom:1rem;font-size:13px;font-weight:600;text-align:center;';
+                const loginForm = document.getElementById('loginForm');
+                loginForm.insertBefore(notice, loginForm.firstChild);
+            }
+            notice.textContent = msg;
+            notice.style.background = type === 'success' ? '#d1fae5' : '#fee2e2';
+            notice.style.color = type === 'success' ? '#2E7D32' : '#ef4444';
+            notice.style.display = 'block';
+            setTimeout(() => { notice.style.display = 'none'; }, 5000);
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardScreen').classList.add('active');
+            
+            const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            document.getElementById('userInitials').textContent = initials;
+            document.getElementById('currentUserName').textContent = currentUser.name;
+            document.getElementById('currentUserRole').textContent = currentUser.role;
+
+            // Show User Log tab only for Administrator
+            const userLogTab = document.getElementById('userLogTab');
+            if (userLogTab) {
+                userLogTab.style.display = currentUser.role === 'Administrator' ? 'block' : 'none';
+            }
+            
+            updateDashboard();
+            updatePendingBadge();
+        }
+
+        async function renderUserLog() {
+            const tbody = document.getElementById('userLogTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-secondary);">Loading users...</td></tr>';
+            try {
+                const data = await apiCall('/users', 'GET', null, true);
+                const users = data.users;
+                document.getElementById('totalUsersCount').textContent = data.stats.total;
+                document.getElementById('pendingUsersCount').textContent = data.stats.pending;
+                document.getElementById('approvedUsersCount').textContent = data.stats.approved;
+                document.getElementById('rejectedUsersCount').textContent = data.stats.rejected;
+                updatePendingBadgeCount(data.stats.pending);
+
+                tbody.innerHTML = users.map((u, i) => {
+                    const roleColor = u.role === 'Administrator' ? '#1e40af' : u.role === 'Manager' ? '#92400e' : '#2E7D32';
+                    const roleBg = u.role === 'Administrator' ? '#dbeafe' : u.role === 'Manager' ? '#fef3c7' : '#d1fae5';
+                    const statusBadge = u.status === 'approved'
+                        ? '<span class="status-badge status-valid">Approved</span>'
+                        : u.status === 'pending'
+                        ? '<span class="status-badge" style="background:#fef9c3;color:#854d0e;">Pending</span>'
+                        : '<span class="status-badge status-invalid">Rejected</span>';
+                    const actions = u.role === 'Administrator' ? '<span style="font-size:11px;color:var(--text-secondary);">—</span>' :
+                        u.status === 'pending' ? `
+                            <button onclick="approveUser('${u._id}')" style="background:#d1fae5;color:#2E7D32;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px;">✓ Approve</button>
+                            <button onclick="rejectUser('${u._id}')" style="background:#fee2e2;color:#ef4444;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✕ Reject</button>
+                        ` : u.status === 'approved' ? `
+                            <button onclick="rejectUser('${u._id}')" style="background:#fee2e2;color:#ef4444;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✕ Revoke</button>
+                        ` : `
+                            <button onclick="approveUser('${u._id}')" style="background:#d1fae5;color:#2E7D32;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">✓ Approve</button>
+                        `;
+                    const regDate = u.registeredAt ? new Date(u.registeredAt).toLocaleString() : '-';
+                    return `<tr>
+                        <td>${i + 1}</td>
+                        <td style="font-weight:600;">${u.name} ${u.emailVerified ? '<span title="Email Verified" style="color:#2E7D32;font-size:12px;">✔️</span>' : ''}</td>
+                        <td style="font-size:12px;">${u.email}</td>
+                        <td><span class="status-badge" style="background:${roleBg};color:${roleColor};">${u.role}</span></td>
+                        <td>${statusBadge}</td>
+                        <td style="font-size:11px;color:var(--text-secondary);">${regDate}</td>
+                        <td>${actions}</td>
+                    </tr>`;
+                }).join('');
+            } catch(err) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#ef4444;padding:1rem;">Failed to load users: ' + err.message + '</td></tr>';
+            }
+        }
+
+        async function approveUser(userId) {
+            try {
+                await apiCall('/users/' + userId + '/approve', 'PUT', null, true);
+                renderUserLog();
+            } catch(err) { alert('Failed: ' + err.message); }
+        }
+
+        async function rejectUser(userId) {
+            try {
+                await apiCall('/users/' + userId + '/reject', 'PUT', null, true);
+                renderUserLog();
+            } catch(err) { alert('Failed: ' + err.message); }
+        }
+
+        function updatePendingBadge() {}
+        function updatePendingBadgeCount(count) {
+            const badge = document.getElementById('pendingBadge');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
+            }
+        }
+        
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                currentUser = null;
+                clearSession();
+                document.getElementById('dashboardScreen').classList.remove('active');
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('loginForm').reset();
+                document.getElementById('signupForm').reset();
+            }
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-panel').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+            if (tab === 'compose') updateGroupDropdown();
+            if (tab === 'userlog') renderUserLog();
+        }
+        
+        // File Upload Handlers
+        function handleDragOver(e) {
+            e.preventDefault();
+            document.getElementById('uploadZone').classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.preventDefault();
+            document.getElementById('uploadZone').classList.remove('dragover');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            document.getElementById('uploadZone').classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect({ target: { files } });
+            }
+        }
+        
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const fileName = file.name;
+            const ext = fileName.split('.').pop().toLowerCase();
+            
+            if (ext === 'csv') {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    parseCSV(event.target.result, fileName);
+                };
+                reader.readAsText(file);
+            } else if (['xlsx', 'xls'].includes(ext)) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    parseExcel(event.target.result, fileName);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('Please upload a CSV or Excel file');
+            }
+        }
+        
+        function parseCSV(text, fileName) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            if (lines.length === 0) return;
+            
+            const headers = lines[0].split(',').map(h => h.trim());
+            columns = headers;
+            
+            const data = lines.slice(1).map(line => {
+                const values = line.split(',').map(v => v.trim());
+                const row = {};
+                headers.forEach((header, i) => {
+                    row[header] = values[i] || '';
+                });
+                return row;
+            });
+            
+            uploadedData = data;
+            displayUploadPreview(fileName, headers);
+        }
+        
+        function parseExcel(arrayBuffer, fileName) {
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (jsonData.length === 0) return;
+            
+            columns = Object.keys(jsonData[0]);
+            uploadedData = jsonData;
+            displayUploadPreview(fileName, columns);
+        }
+        
+        function displayUploadPreview(fileName, headersList) {
+            document.getElementById('fileInfo').classList.add('show');
+            document.getElementById('fileName').textContent = fileName;
+            document.getElementById('rowCount').textContent = uploadedData.length;
+            
+            const emailSelect = document.getElementById('emailColumn');
+            const nameSelect = document.getElementById('nameColumn');
+            
+            emailSelect.innerHTML = '<option value="">Auto-detect email column...</option>';
+            nameSelect.innerHTML = '<option value="">No name column</option>';
+            
+            headersList.forEach(header => {
+                const emailOption = document.createElement('option');
+                emailOption.value = header;
+                emailOption.textContent = header;
+                emailSelect.appendChild(emailOption);
+                
+                const nameOption = document.createElement('option');
+                nameOption.value = header;
+                nameOption.textContent = header;
+                nameSelect.appendChild(nameOption);
+            });
+            
+            const emailHeaders = headersList.filter(h => h.toLowerCase().includes('email'));
+            if (emailHeaders.length > 0) {
+                emailSelect.value = emailHeaders[0];
+            }
+            
+            const nameHeaders = headersList.filter(h => h.toLowerCase().includes('name') && !h.toLowerCase().includes('email'));
+            if (nameHeaders.length > 0) {
+                nameSelect.value = nameHeaders[0];
+            }
+            
+            showUploadPreview();
+        }
+        
+        function showUploadPreview() {
+            document.getElementById('previewEmpty').style.display = 'none';
+            document.getElementById('previewData').style.display = 'block';
+            
+            const emailCol = document.getElementById('emailColumn').value;
+            const nameCol = document.getElementById('nameColumn').value;
+            
+            let validCount = 0;
+            let invalidCount = 0;
+            const previewRows = [];
+            
+            uploadedData.slice(0, 10).forEach(row => {
+                const email = row[emailCol] || '';
+                const name = nameCol ? (row[nameCol] || '') : '';
+                const isValid = email.includes('@') && email.includes('.');
+                
+                if (isValid) validCount++;
+                else invalidCount++;
+                
+                previewRows.push({ email, name, isValid });
+            });
+            
+            uploadedData.forEach(row => {
+                const email = row[emailCol] || '';
+                if (!email.includes('@') || !email.includes('.')) {
+                    invalidCount++;
+                }
+            });
+            validCount = uploadedData.length - invalidCount;
+            
+            document.getElementById('previewValidCount').textContent = validCount;
+            document.getElementById('previewInvalidCount').textContent = invalidCount;
+            
+            const tbody = document.getElementById('previewTableBody');
+            tbody.innerHTML = previewRows.map(row => `
+                <tr>
+                    <td>${row.email}</td>
+                    <td>${row.name}</td>
+                    <td><span class="status-badge ${row.isValid ? 'status-valid' : 'status-invalid'}">${row.isValid ? 'Valid' : 'Invalid'}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        async function createGroupFromUpload() {
+            const emailCol = document.getElementById('emailColumn').value;
+            const nameCol = document.getElementById('nameColumn').value;
+            const groupName = document.getElementById('uploadGroupName').value.trim();
+            const groupDesc = document.getElementById('uploadGroupDesc').value.trim();
+
+            if (!emailCol) { alert('Please select the email column'); return; }
+            if (!groupName) { alert('Please enter a group name'); return; }
+
+            const emailsData = [];
+            uploadedData.forEach(row => {
+                const email = row[emailCol] ? row[emailCol].trim() : '';
+                const name = nameCol ? (row[nameCol] ? row[nameCol].trim() : '') : '';
+                if (email && email.includes('@') && email.includes('.')) {
+                    emailsData.push({ email, name });
+                }
+            });
+
+            if (emailsData.length === 0) { alert('No valid emails found'); return; }
+
+            const btn = document.querySelector('[onclick="createGroupFromUpload()"]');
+            if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+
+            try {
+                const data = await apiCall('/groups', 'POST', {
+                    name: groupName,
+                    description: groupDesc,
+                    emails: emailsData.map(e => e.email),
+                    names: emailsData.map(e => e.name)
+                }, true);
+
+                document.getElementById('uploadGroupName').value = '';
+                document.getElementById('uploadGroupDesc').value = '';
+                document.getElementById('fileInput').value = '';
+                document.getElementById('fileInfo').classList.remove('show');
+                document.getElementById('previewEmpty').style.display = 'block';
+                document.getElementById('previewData').style.display = 'none';
+                uploadedData = [];
+                loadDashboardData();
+                alert('✓ ' + data.message);
+            } catch(err) {
+                alert('Failed to create group: ' + err.message);
+            } finally {
+                if (btn) { btn.textContent = 'Create Group from Upload'; btn.disabled = false; }
+            }
+        }
+        
+        async function updateGroupDropdown() {
+            const select = document.getElementById('selectGroup');
+            select.innerHTML = '<option value="">Loading groups...</option>';
+            try {
+                const data = await apiCall('/groups', 'GET', null, true);
+                groups = data.groups;
+                select.innerHTML = '<option value="">Choose a group...</option>' +
+                    groups.map(g => `<option value="${g._id}">${g.name} (${g.recipientCount} recipients)</option>`).join('');
+            } catch(err) {
+                select.innerHTML = '<option value="">Failed to load groups</option>';
+            }
+        }
+        
+        function updateGroupPreview() {
+            const idx = document.getElementById('selectGroup').value;
+            const previewDiv = document.getElementById('previewRecipients');
+            const subjectDiv = document.getElementById('previewSubject');
+            const bodyDiv = document.getElementById('previewBody');
+            const timeDiv = document.getElementById('estimatedTime');
+            
+            if (!idx) {
+                previewDiv.textContent = 'No group selected';
+                subjectDiv.textContent = '-';
+                bodyDiv.textContent = '-';
+                timeDiv.textContent = '-';
+                return;
+            }
+            
+            const group = groups.find(g => g._id === idx) || groups[idx];
+            const subject = document.getElementById('emailSubject').value || '(no subject)';
+            const body = document.getElementById('emailBody').value || '(empty)';
+            const delay = parseInt(document.getElementById('sendDelay').value) || 2;
+            const totalSecs = (group.recipientCount || 0) * delay;
+            const mins = Math.ceil(totalSecs / 60);
+            
+            previewDiv.textContent = group.name + ' (' + group.recipientCount + ' recipients)';
+            subjectDiv.textContent = subject;
+            bodyDiv.textContent = body;
+            timeDiv.textContent = mins + ' minute(s)';
+
+            // Update attachments preview
+            const attachPreview = document.getElementById('previewAttachments');
+            if (attachPreview) {
+                if (attachedFiles.length === 0) {
+                    attachPreview.textContent = 'None';
+                } else {
+                    attachPreview.textContent = attachedFiles.map(f => f.name).join(', ');
+                }
+            }
+        }
+        
+        document.getElementById('selectGroup').addEventListener('change', updateGroupPreview);
+        document.getElementById('emailSubject').addEventListener('input', updateGroupPreview);
+        document.getElementById('emailBody').addEventListener('input', updateGroupPreview);
+        document.getElementById('sendDelay').addEventListener('input', updateGroupPreview);
+
+        // ─── Attachment Logic ───────────────────────────────────────────
+        let attachedFiles = [];
+        const MAX_FILES = 5;
+        const MAX_SIZE_MB = 10;
+
+        function getFileIcon(name) {
+            const ext = name.split('.').pop().toLowerCase();
+            const icons = { pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📋',txt:'📃',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',gif:'🖼️',zip:'🗜️',ppt:'📑',pptx:'📑' };
+            return icons[ext] || '📎';
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function handleAttachmentDragOver(e) {
+            e.preventDefault();
+            document.getElementById('attachmentZone').classList.add('dragover');
+        }
+
+        function handleAttachmentDragLeave(e) {
+            e.preventDefault();
+            document.getElementById('attachmentZone').classList.remove('dragover');
+        }
+
+        function handleAttachmentDrop(e) {
+            e.preventDefault();
+            document.getElementById('attachmentZone').classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) processAttachments(e.dataTransfer.files);
+        }
+
+        function handleAttachmentSelect(e) {
+            processAttachments(e.target.files);
+            document.getElementById('attachmentInput').value = '';
+        }
+
+        function processAttachments(files) {
+            for (const file of files) {
+                if (attachedFiles.length >= MAX_FILES) { alert('Maximum ' + MAX_FILES + ' files allowed.'); break; }
+                if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds 10 MB limit and was skipped.'); continue; }
+                if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) { alert('"' + file.name + '" is already attached.'); continue; }
+                attachedFiles.push(file);
+            }
+            renderAttachmentList();
+            updateGroupPreview();
+        }
+
+        function removeAttachment(index) {
+            attachedFiles.splice(index, 1);
+            renderAttachmentList();
+            updateGroupPreview();
+        }
+
+        function clearAllAttachments() {
+            attachedFiles = [];
+            renderAttachmentList();
+            updateGroupPreview();
+        }
+
+        function renderAttachmentList() {
+            const list = document.getElementById('attachmentList');
+            const summary = document.getElementById('attachmentSummary');
+            if (attachedFiles.length === 0) { list.innerHTML = ''; summary.style.display = 'none'; return; }
+            list.innerHTML = attachedFiles.map((file, i) => `
+                <div class="attachment-item">
+                    <div class="attachment-item-icon">${getFileIcon(file.name)}</div>
+                    <div class="attachment-item-info">
+                        <div class="attachment-item-name" title="${file.name}">${file.name}</div>
+                        <div class="attachment-item-size">${formatSize(file.size)}</div>
+                    </div>
+                    <button class="attachment-remove-btn" onclick="removeAttachment(${i})" title="Remove">✕</button>
+                </div>
+            `).join('');
+            const totalSize = attachedFiles.reduce((sum, f) => sum + f.size, 0);
+            document.getElementById('attachmentCountText').textContent = attachedFiles.length + ' file(s) attached';
+            document.getElementById('attachmentSizeText').textContent = formatSize(totalSize) + ' total';
+            summary.style.display = 'flex';
+        }
+        
+        async function sendEmail() {
+            const idx = document.getElementById('selectGroup').value;
+            const campaignName = document.getElementById('campaignName').value.trim();
+            const subject = document.getElementById('emailSubject').value.trim();
+            const body = document.getElementById('emailBody').value.trim();
+
+            if (!idx) { alert('Please select a recipient group'); return; }
+            if (!subject) { alert('Please enter an email subject'); return; }
+            if (!body) { alert('Please write the email body'); return; }
+
+            const group = groups.find(g => g._id === idx) || groups[idx];
+            const totalRecipients = group ? group.recipientCount : 0;
+
+            const confirmed = confirm(
+                'CONFIRM SEND CAMPAIGN\n\n' +
+                'Group: ' + (group ? group.name : idx) + '\n' +
+                'Recipients: ' + totalRecipients + '\n' +
+                'Subject: ' + subject + '\n\n' +
+                'Emails will be sent from trugydexcompliance@gmail.com\n' +
+                'Estimated time: ' + Math.ceil(totalRecipients * 2 / 60) + ' minute(s)\n\n' +
+                'Are you sure you want to send?'
+            );
+            if (!confirmed) return;
+
+            const btn = document.querySelector('[onclick="sendEmail()"]');
+            if (btn) { btn.innerHTML = '&#9203; Sending emails... please wait'; btn.disabled = true; btn.style.background = '#f59e0b'; }
+
+            // Show progress bar
+            let progressDiv = document.getElementById('sendProgress');
+            if (!progressDiv) {
+                progressDiv = document.createElement('div');
+                progressDiv.id = 'sendProgress';
+                progressDiv.style.cssText = 'margin-top:1rem;padding:1rem;background:#eff6ff;border-radius:8px;border-left:4px solid #003087;font-size:13px;';
+                btn.parentNode.insertBefore(progressDiv, btn.nextSibling);
+            }
+            progressDiv.innerHTML = '&#128231; Sending emails to ' + totalRecipients + ' recipients...<br><small>Do not close this window. This may take a few minutes.</small>';
+            progressDiv.style.display = 'block';
+
+            try {
+                // Build signature HTML
+                const signatureHtml = `<br><br>
+                    <table style="width:100%;border-top:2px solid #003087;padding-top:12px;margin-top:16px;">
+                        <tr>
+                            <td style="vertical-align:middle;padding-right:16px;width:130px;">
+                                <img src="/logo.png" alt="Trugydex" style="width:120px;height:auto;" />
+                            </td>
+                            <td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:16px;">
+                                <p style="margin:0;font-size:14px;font-weight:700;color:#003087;">Trugydex Compliance</p>
+                                <p style="margin:4px 0 0;font-size:12px;color:#666;">SAHI SALAH SUCHAN</p>
+                                <p style="margin:4px 0 0;font-size:12px;color:#666;">trugydexcompliance@gmail.com</p>
+                                <p style="margin:4px 0 0;font-size:12px;color:#666;">www.trugydex.in</p>
+                            </td>
+                        </tr>
+                    </table>
+                    <p style="font-size:11px;color:#aaa;text-align:center;margin-top:12px;">&copy; 2026 Trugydex. All rights reserved.</p>`;
+
+                const data = await apiCall('/email/send', 'POST', {
+                    groupId: idx,
+                    subject,
+                    body: body + signatureHtml,
+                    campaignName: campaignName || 'Untitled Campaign'
+                }, true);
+
+                progressDiv.style.background = '#f0fdf4';
+                progressDiv.style.borderColor = '#2E7D32';
+                progressDiv.innerHTML = '&#10003; ' + data.message;
+
+                if (btn) { btn.innerHTML = 'Send Campaign'; btn.disabled = false; btn.style.background = ''; }
+
+                setTimeout(() => {
+                    document.getElementById('selectGroup').value = '';
+                    document.getElementById('campaignName').value = '';
+                    document.getElementById('emailSubject').value = '';
+                    document.getElementById('emailBody').value = '';
+                    document.getElementById('sendDelay').value = '2';
+                    attachedFiles = [];
+                    renderAttachmentList();
+                    updateGroupPreview();
+                    loadDashboardData();
+                    if (progressDiv) progressDiv.style.display = 'none';
+                    switchTab('history');
+                }, 3000);
+
+            } catch(err) {
+                progressDiv.style.background = '#fef2f2';
+                progressDiv.style.borderColor = '#ef4444';
+                progressDiv.innerHTML = '&#10060; Failed: ' + err.message;
+                if (btn) { btn.innerHTML = 'Send Campaign'; btn.disabled = false; btn.style.background = ''; }
+            }
+        }
+        
+        function updateDashboard() { loadDashboardData(); }
+
+        async function loadDashboardData() {
+            try {
+                // Load stats
+                const statsData = await apiCall('/campaigns/stats', 'GET', null, true);
+                document.getElementById('totalGroups').textContent = statsData.stats.totalGroups;
+                document.getElementById('totalRecipients').textContent = statsData.stats.totalRecipients;
+                document.getElementById('emailsSent').textContent = statsData.stats.totalCampaigns;
+
+                // Load recent groups
+                const groupData = await apiCall('/groups', 'GET', null, true);
+                groups = groupData.groups;
+                const activity = document.getElementById('recentActivity');
+                if (groups.length === 0) {
+                    activity.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No groups created yet. Upload emails to get started!</p>';
+                } else {
+                    activity.innerHTML = groups.slice(0, 5).map(g => `
+                        <div class="recent-item">
+                            <strong>${g.name}</strong>
+                            <p>${g.recipientCount} recipients &bull; ${new Date(g.createdAt).toLocaleDateString()}</p>
+                        </div>
+                    `).join('');
+                }
+
+                // Load campaign history
+                const campData = await apiCall('/campaigns', 'GET', null, true);
+                campaigns = campData.campaigns;
+                const history = document.getElementById('campaignHistory');
+                if (campaigns.length === 0) {
+                    history.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No campaigns sent yet</p>';
+                } else {
+                    history.innerHTML = campaigns.map(c => `
+                        <div class="recent-item">
+                            <strong>${c.name}</strong>
+                            <p>📧 Subject: ${c.subject}</p>
+                            <p>👥 Group: ${c.groupName} &bull; ${c.recipientCount} recip                        }
+                    </div>
+                `).join('');
+                }
+            } catch(err) {
+                console.error('Dashboard load error:', err.message);
+            }
+    </script>
+</body>
+</html>
