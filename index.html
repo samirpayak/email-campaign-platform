@@ -1166,7 +1166,7 @@
                                         <td style="vertical-align:middle;border-left:2px solid #e0e0e0;padding-left:16px;">
                                             <p style="margin:0;font-size:13px;font-weight:700;color:#003087;">Trugydex Compliance</p>
                                             <p style="margin:3px 0 0;font-size:11px;color:#666;">SAHI SALAH SUCHAN</p>
-                                            <p style="margin:3px 0 0;font-size:11px;color:#666;">trugydexcompliance@gmail.com</p>
+                                            <p style="margin:3px 0 0;font-size:11px;color:#666;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cdb9bfb8aab4a9a8b5aea2a0bda1a4aca3aea88daaa0aca4a1e3aea2a0">[email&#160;protected]</a></p>
                                             <p style="margin:3px 0 0;font-size:11px;color:#666;">www.trugydex.in</p>
                                         </td>
                                     </tr>
@@ -1301,7 +1301,7 @@
         </div>
     </div>
     
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    <script>
         // User database
         // ⚠️ IMPORTANT SECURITY NOTICE ⚠️
         // ===========================================
@@ -2051,7 +2051,13 @@
                         <div class="recent-item">
                             <strong>${c.name}</strong>
                             <p>📧 Subject: ${c.subject}</p>
-                            <p>👥 Group: ${c.groupName} &bull; ${c.recipientCount} recipients</p>
-                            <p>📎 Attachments: ${c.attachments && c.attachments.length > 0 ? c.attachments.join(', ') : 'None'}</p>
-                            <p>🕐 Sent: ${new Date(c.sentAt).toLocaleString()}</p>
-           
+                            <p>👥 Group: ${c.groupName} &bull; ${c.recipientCount} recip                        }
+                    </div>
+                `).join('');
+                }
+            } catch(err) {
+                console.error('Dashboard load error:', err.message);
+            }
+    </script>
+</body>
+</html>
