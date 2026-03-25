@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Campaign Manager - Trugydex</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--primary-blue:#003087;--primary-green:#2E7D32;--secondary-blue:#1a4a8f;--light-blue:#f0f4f9;--light-green:#f1f8f4;--text-primary:#1a1a1a;--text-secondary:#666666;--border-color:#e0e0e0;--success-color:#2E7D32;--error-color:#ef4444}
+        body{font-family:'DM Sans',sans-serif;background:#f8f9fa;color:var(--text-primary);line-height:1.6}
+        
+        .dashboard{background:white;min-height:100vh}
+        .top-bar{background:linear-gradient(135deg,var(--primary-blue) 0%,var(--secondary-blue) 100%);color:white;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+        .top-bar-user{display:flex;align-items:center;gap:12px}
+        .user-avatar{width:36px;height:36px;border-radius:50%;background:rgba(46,125,50,0.3);display:flex;align-items:center;justify-content:center;font-weight:700}
+        .user-info .name{font-weight:600;font-size:13px}.user-info .role{font-size:11px;opacity:0.8}
+        .logout-btn{padding:8px 16px;background:rgba(255,255,255,0.2);color:white;border:2px solid white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.3s}
+        .logout-btn:hover{background:white;color:var(--primary-blue)}
+        
+        .header{background:linear-gradient(135deg,var(--primary-blue) 0%,var(--secondary-blue) 100%);color:white;padding:2.5rem 2rem}
+        .header h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem}
+        
+        .container{padding:0 2rem 2rem;max-width:1400px;margin:0 auto}
+        .nav-tabs{display:flex;border-bottom:2px solid var(--border-color);margin:0 -2rem 2rem;padding:0 2rem;overflow-x:auto;background:white;position:sticky;top:60px;z-index:50}
+        .nav-tab{padding:16px 24px;background:transparent;border:none;cursor:pointer;font-size:15px;font-weight:600;color:var(--text-secondary);border-bottom:3px solid transparent;transition:all 0.3s;white-space:nowrap}
+        .nav-tab.active{color:var(--primary-blue);border-bottom-color:var(--primary-blue)}
+        .nav-tab:hover{color:var(--primary-blue)}
+        
+        .tab-panel{display:none}
+        .tab-panel.active{display:block}
+        
+        .loading{text-align:center;padding:3rem;color:var(--text-secondary)}
+        .spinner{display:inline-block;width:40px;height:40px;border:4px solid var(--light-blue);border-top-color:var(--primary-blue);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:1rem}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        
+        @media(max-width:1024px){.nav-tabs{flex-wrap:wrap}}
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div><img src="/logo.png" alt="Trugydex" style="height:36px;width:auto;filter:brightness(0) invert(1);" /></div>
+        <div class="top-bar-user">
+            <div class="user-avatar" id="userInitials">A</div>
+            <div class="user-info"><div class="name" id="currentUserName">Admin</div><div class="role" id="currentUserRole">Administrator</div></div>
+            <button class="logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <div class="header">
+        <h1>Welcome to Campaign Manager</h1>
+        <p>Upload email lists, send bulk campaigns, and track results</p>
+    </div>
+    
+    <!-- Navigation & Module Container -->
+    <div class="container">
+        <div class="nav-tabs" id="navTabs">
+            <button class="nav-tab active" data-module="dashboard">Dashboard</button>
+            <button class="nav-tab" data-module="upload">&#128229; Bulk Upload</button>
+            <button class="nav-tab" data-module="compose">Send Email</button>
+            <button class="nav-tab" data-module="history">History</button>
+            <button class="nav-tab" id="userLogTab" data-module="userlog" style="display:none;">&#128101; User Log <span id="pendingBadge" style="display:none;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px;">0</span></button>
+        </div>
+        
+        <!-- Module Container -->
+        <div id="moduleContainer"></div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+<script src="/app.js"></script>
+
+</body>
+</html>
