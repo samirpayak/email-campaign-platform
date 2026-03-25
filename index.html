@@ -139,7 +139,7 @@
                 <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value" id="emailsSent">0</div></div>
             </div>
             <div class="card"><div class="card-title">Quick Start</div>
-                <div class="alert alert-info"><strong>Getting Started:</strong><br>1️⃣ Go to Upload tab<br>2️⃣ Upload CSV/Excel with emails<br>3️⃣ Create group<br>4️⃣ Go to Send Email tab<br>5️⃣ Format with colors, fonts, tables<br>6️⃣ Click Send!</div>
+                <div class="alert alert-info"><strong>Getting Started:</strong><br>1️⃣ Go to Upload tab<br>2️⃣ Upload CSV/Excel with emails<br>3️⃣ Create group<br>4️⃣ Go to Send Email tab<br>5️⃣ Format with colors, fonts, tables<br>6️⃣ Add attachments (optional)<br>7️⃣ Click Send!</div>
             </div>
             <div class="card"><div class="card-title">Recent Groups</div><div id="recentActivity"><p style="color:var(--text-secondary);font-size:14px;">No groups yet.</p></div></div>
         </div>
@@ -181,7 +181,7 @@
 
         <!-- Compose Tab -->
         <div id="compose" class="tab-panel">
-            <div class="alert alert-info"><strong>💡 Tip:</strong> Use the rich editor to format text like Gmail!</div>
+            <div class="alert alert-info"><strong>💡 Tip:</strong> Use the rich editor to format text like Gmail! Attach files if needed.</div>
             <div class="grid-2">
                 <div class="card">
                     <div class="card-title">Compose Email</div>
@@ -195,6 +195,25 @@
                         </div>
                         <textarea id="emailBody" placeholder="Write your message..."></textarea>
                     </div>
+                    
+                    <!-- ATTACHMENTS SECTION -->
+                    <div class="form-group">
+                        <label class="form-label">📎 Attachments (Optional)</label>
+                        <div class="attachment-zone" id="attachmentZone" ondrop="handleAttachmentDrop(event)" ondragover="handleAttachmentDragOver(event)" ondragleave="handleAttachmentDragLeave(event)" onclick="document.getElementById('attachmentInput').click()">
+                            <div style="font-size:2rem;margin-bottom:0.5rem;">📎</div>
+                            <p><strong>Click or drag files here</strong></p>
+                            <p style="margin-top:4px;font-size:12px;">Max 5 files • 10 MB each</p>
+                        </div>
+                        <input type="file" id="attachmentInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.zip,.ppt,.pptx" style="display:none;" onchange="handleAttachmentSelect(event)" />
+                        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">Supported: PDF, Word, Excel, CSV, Images, ZIP, PPT, TXT</div>
+                        <div class="attachment-list" id="attachmentList" style="margin-top:12px;"></div>
+                        <div id="attachmentSummary" style="display:none;" class="attachment-summary">
+                            <span id="attachmentCountText">0 file(s)</span>
+                            <span id="attachmentSizeText">0 KB</span>
+                            <button onclick="clearAllAttachments()" style="background:none;border:none;color:var(--error-color);cursor:pointer;font-size:12px;font-weight:600;">✕ Clear All</button>
+                        </div>
+                    </div>
+                    
                     <div class="form-group"><label class="form-label">Send Delay (seconds)</label><input type="number" id="sendDelay" value="2" min="1" max="30" style="width:100px;" /></div>
                     <button class="button-login" onclick="sendEmail()" style="width:100%;padding:14px;">Send Campaign</button>
                 </div>
@@ -203,6 +222,7 @@
                     <div style="background:linear-gradient(135deg,var(--light-blue) 0%,var(--light-green) 100%);border-radius:10px;padding:1.5rem;border:2px solid var(--primary-blue);">
                         <div style="margin-bottom:16px;"><div style="font-size:11px;color:var(--primary-blue);font-weight:700;text-transform:uppercase;">Recipients:</div><div style="font-size:13px;margin-top:6px;padding:8px 12px;background:white;border-radius:6px;" id="previewRecipients">None</div></div>
                         <div style="margin-bottom:16px;"><div style="font-size:11px;color:var(--primary-blue);font-weight:700;text-transform:uppercase;">Subject:</div><div style="font-size:13px;margin-top:6px;padding:8px 12px;background:white;border-radius:6px;" id="previewSubject">-</div></div>
+                        <div style="margin-bottom:16px;"><div style="font-size:11px;color:var(--primary-blue);font-weight:700;text-transform:uppercase;">Attachments:</div><div style="font-size:13px;margin-top:6px;padding:8px 12px;background:white;border-radius:6px;" id="previewAttachments">None</div></div>
                         <div><div style="font-size:11px;color:var(--primary-blue);font-weight:700;text-transform:uppercase;">Est. Time:</div><div style="font-size:13px;margin-top:6px;padding:8px 12px;background:white;border-radius:6px;" id="estimatedTime">-</div></div>
                     </div>
                 </div>
@@ -238,6 +258,9 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
 <script>
+// Suppress TinyMCE API key warning
+window.tinymce = window.tinymce || {};
+
 // Initialize TinyMCE AFTER DOM loads
 document.addEventListener('DOMContentLoaded', function() {
     tinymce.init({
@@ -529,6 +552,77 @@ function updateGroupPreview() {
     document.getElementById('previewRecipients').textContent = group ? `${group.name} (${group.recipientCount})` : 'None';
     document.getElementById('previewSubject').textContent = subject;
     document.getElementById('estimatedTime').textContent = mins + ' min';
+    
+    // Update attachments preview
+    if (attachedFiles.length === 0) {
+        document.getElementById('previewAttachments').textContent = 'None';
+    } else {
+        document.getElementById('previewAttachments').textContent = attachedFiles.length + ' file(s)';
+    }
+}
+
+// ATTACHMENT FUNCTIONS
+const MAX_FILES = 5;
+const MAX_SIZE_MB = 10;
+
+function getFileIcon(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    const icons = { pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📋',txt:'📃',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',gif:'🖼️',zip:'🗜️',ppt:'📑',pptx:'📑' };
+    return icons[ext] || '📎';
+}
+
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function handleAttachmentDragOver(e) { e.preventDefault(); document.getElementById('attachmentZone').classList.add('dragover'); }
+function handleAttachmentDragLeave(e) { e.preventDefault(); document.getElementById('attachmentZone').classList.remove('dragover'); }
+function handleAttachmentDrop(e) { e.preventDefault(); document.getElementById('attachmentZone').classList.remove('dragover'); if (e.dataTransfer.files.length > 0) processAttachments(e.dataTransfer.files); }
+function handleAttachmentSelect(e) { processAttachments(e.target.files); document.getElementById('attachmentInput').value = ''; }
+
+function processAttachments(files) {
+    for (const file of files) {
+        if (attachedFiles.length >= MAX_FILES) { alert('Maximum ' + MAX_FILES + ' files allowed.'); break; }
+        if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds ' + MAX_SIZE_MB + ' MB limit.'); continue; }
+        if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) { alert('"' + file.name + '" already attached.'); continue; }
+        attachedFiles.push(file);
+    }
+    renderAttachmentList();
+    updateGroupPreview();
+}
+
+function removeAttachment(index) {
+    attachedFiles.splice(index, 1);
+    renderAttachmentList();
+    updateGroupPreview();
+}
+
+function clearAllAttachments() {
+    attachedFiles = [];
+    renderAttachmentList();
+    updateGroupPreview();
+}
+
+function renderAttachmentList() {
+    const list = document.getElementById('attachmentList');
+    const summary = document.getElementById('attachmentSummary');
+    if (attachedFiles.length === 0) { list.innerHTML = ''; summary.style.display = 'none'; return; }
+    list.innerHTML = attachedFiles.map((file, i) => `
+        <div class="attachment-item">
+            <span style="font-size:1.2rem;">${getFileIcon(file.name)}</span>
+            <div class="attachment-item-info">
+                <div class="attachment-item-name" title="${file.name}">${file.name}</div>
+                <div class="attachment-item-size">${formatSize(file.size)}</div>
+            </div>
+            <button class="attachment-remove-btn" onclick="removeAttachment(${i})" title="Remove">✕</button>
+        </div>
+    `).join('');
+    const totalSize = attachedFiles.reduce((sum, f) => sum + f.size, 0);
+    document.getElementById('attachmentCountText').textContent = attachedFiles.length + ' file(s) attached';
+    document.getElementById('attachmentSizeText').textContent = formatSize(totalSize) + ' total';
+    summary.style.display = 'flex';
 }
 
 async function sendEmail() {
@@ -536,7 +630,7 @@ async function sendEmail() {
     const subject = document.getElementById('emailSubject').value.trim();
     const body = tinymce.get('emailBody') ? tinymce.get('emailBody').getContent() : '';
 
-    if (!idx || !subject || !body) { alert('Fill all fields'); return; }
+    if (!idx || !subject || !body) { alert('Fill all required fields'); return; }
 
     const group = groups.find(g => g._id === idx);
     if (!confirm(`Send to ${group.recipientCount} recipients?`)) return;
@@ -553,6 +647,8 @@ async function sendEmail() {
         document.getElementById('emailSubject').value = '';
         tinymce.get('emailBody').setContent('');
         document.getElementById('campaignName').value = '';
+        attachedFiles = [];
+        renderAttachmentList();
         loadDashboardData();
         switchTab('history');
     } catch(err) {
@@ -603,6 +699,13 @@ async function approveUser(userId) {
         alert('Failed: ' + err.message);
     }
 }
+
+// Update preview on input changes
+document.addEventListener('change', function() {
+    if (event.target.id === 'selectGroup' || event.target.id === 'emailSubject' || event.target.id === 'sendDelay') {
+        updateGroupPreview();
+    }
+});
 </script>
 </body>
 </html>
