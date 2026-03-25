@@ -267,6 +267,188 @@ app.post('/api/campaigns', authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// ════════════════════════════════════════════════════════════════════════════════
+// NSE CIRCULAR ROUTES (NEW MODULE - COMPLETELY SEPARATE)
+// ════════════════════════════════════════════════════════════════════════════════
+
+const xml2js = require('xml2js');
+const https = require('https');
+
+// ── NSE Circular Schema ───────────────────────────────────────────────────────
+const nseCircularSchema = new mongoose.Schema({
+    title: String,
+    description: String,
+    link: String,
+    pubDate: Date,
+    category: String,
+    guid: { type: String, unique: true },
+    fetchedAt: { type: Date, default: Date.now },
+    read: { type: Boolean, default: false }
+});
+
+const NSECircular = mongoose.models.NSECircular || mongoose.model('NSECircular', nseCircularSchema);
+
+// ── Fetch NSE RSS Feed ────────────────────────────────────────────────────────
+async function fetchNSECirculars() {
+    return new Promise((resolve, reject) => {
+        https.get('https://nsearchives.nseindia.com/content/RSS/Circulars.xml', async (res) => {
+            let data = '';
+            
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            
+            res.on('end', async () => {
+                try {
+                    const parser = new xml2js.Parser();
+                    const result = await parser.parseStringPromise(data);
+                    
+                    // Extract items from RSS feed
+                    const items = result.rss.channel[0].item || [];
+                    
+                    let added = 0;
+                    let skipped = 0;
+                    
+                    for (const item of items) {
+                        try {
+                            const circular = {
+                                title: item.title ? item.title[0] : 'No Title',
+                                description: item.description ? item.description[0] : '',
+                                link: item.link ? item.link[0] : '',
+                                pubDate: item.pubDate ? new Date(item.pubDate[0]) : new Date(),
+                                category: item.category ? item.category[0] : 'General',
+                                guid: item.guid ? item.guid[0] : `${item.title}-${Date.now()}`
+                            };
+                            
+                            // Check if already exists
+                            const exists = await NSECircular.findOne({ guid: circular.guid });
+                            
+                            if (!exists) {
+                                await NSECircular.create(circular);
+                                added++;
+                            } else {
+                                skipped++;
+                            }
+                        } catch (err) {
+                            console.error('Error processing circular:', err.message);
+                        }
+                    }
+                    
+                    resolve({
+                        success: true,
+                        message: `Fetched ${added} new circulars, ${skipped} already in database`,
+                        added,
+                        skipped,
+                        total: items.length
+                    });
+                    
+                } catch (err) {
+                    reject({ success: false, message: 'XML Parse Error: ' + err.message });
+                }
+            });
+        }).on('error', (err) => {
+            reject({ success: false, message: 'Network Error: ' + err.message });
+        });
+    });
+}
+
+// ── API Route: Fetch Fresh Circulars ──────────────────────────────────────────
+app.post('/api/nse/fetch', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const result = await fetchNSECirculars();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json(error);
+    }
+});
+
+// ── API Route: Get All Circulars (with pagination) ───────────────────────────
+app.get('/api/nse/circulars', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        
+        const circulars = await NSECircular.find()
+            .sort({ pubDate: -1 })
+            .skip(skip)
+            .limit(limit);
+        
+        const total = await NSECircular.countDocuments();
+        
+        res.json({
+            success: true,
+            circulars,
+            pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ── API Route: Get Circular by ID ─────────────────────────────────────────────
+app.get('/api/nse/circulars/:id', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const circular = await NSECircular.findById(req.params.id);
+        if (!circular) return res.status(404).json({ success: false, message: 'Circular not found.' });
+        
+        // Mark as read
+        circular.read = true;
+        await circular.save();
+        
+        res.json({ success: true, circular });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ── API Route: Get Stats ──────────────────────────────────────────────────────
+app.get('/api/nse/stats', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const total = await NSECircular.countDocuments();
+        const unread = await NSECircular.countDocuments({ read: false });
+        const byCategory = await NSECircular.aggregate([
+            { $group: { _id: '$category', count: { $sum: 1 } } }
+        ]);
+        
+        res.json({
+            success: true,
+            stats: {
+                total,
+                unread,
+                byCategory
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ── API Route: Search Circulars ───────────────────────────────────────────────
+app.get('/api/nse/search', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const keyword = req.query.q || '';
+        const circulars = await NSECircular.find({
+            $or: [
+                { title: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } },
+                { category: { $regex: keyword, $options: 'i' } }
+            ]
+        }).sort({ pubDate: -1 }).limit(50);
+        
+        res.json({ success: true, circulars });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ════════════════════════════════════════════════════════════════════════════════
+
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found.' }));
 
 module.exports = app;
