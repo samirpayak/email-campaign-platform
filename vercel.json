@@ -1,19 +1,6 @@
 {
   "version": 2,
   "buildCommand": "npm ci",
-  "env": {
-    "NODE_ENV": "production",
-    "MONGODB_URI": "@MONGODB_URI",
-    "GMAIL_USER": "@GMAIL_USER",
-    "GMAIL_APP_PASSWORD": "@GMAIL_APP_PASSWORD",
-    "JWT_SECRET": "@JWT_SECRET",
-    "ADMIN_EMAIL": "@ADMIN_EMAIL",
-    "ADMIN_PASSWORD": "@ADMIN_PASSWORD",
-    "ADMIN_NAME": "@ADMIN_NAME",
-    "REDIS_HOST": "@REDIS_HOST",
-    "REDIS_PORT": "@REDIS_PORT",
-    "GMAIL_SENDER_NAME": "@GMAIL_SENDER_NAME"
-  },
   "functions": {
     "api/**/*.js": {
       "memory": 1024,
