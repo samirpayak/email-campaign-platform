@@ -37,7 +37,14 @@
                 headers,
                 body: body ? JSON.stringify(body) : undefined
             });
-            const data = await res.json();
+            
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                throw new Error('Server error (' + res.status + '): ' + res.statusText + '. Make sure backend API is running.');
+            }
+            
             if (!res.ok) throw new Error(data.message || 'Request failed');
             return data;
         }
