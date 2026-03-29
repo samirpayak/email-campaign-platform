@@ -1,15 +1,17 @@
 {
   "version": 2,
-  "buildCommand": "npm ci",
+  "public": true,
+  "buildCommand": "",
+  "outputDirectory": ".",
   "functions": {
     "api/**/*.js": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/server.js" },
-    { "source": "/(.*)", "destination": "/$1" }
+    { "source": "/api/(.*)", "destination": "/api/server.js" }
   ],
   "headers": [
     {
