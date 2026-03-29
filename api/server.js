@@ -359,6 +359,63 @@ app.get('/api/ping', (req, res) => {
     res.json({ success: true, message: 'API is reachable' });
 });
 
+// ── Diagnostic Endpoint (No Auth - For Troubleshooting) ────────────────────────
+app.get('/api/diagnose', async (req, res) => {
+    const diagnostics = {
+        success: true,
+        message: 'Diagnostic report',
+        environment: {
+            NODE_ENV: process.env.NODE_ENV,
+            MONGODB_URI_SET: !!process.env.MONGODB_URI,
+            REDIS_URL_SET: !!process.env.REDIS_URL,
+            REDIS_HOST_SET: !!process.env.REDIS_HOST,
+            GMAIL_USER_SET: !!process.env.GMAIL_USER,
+            JWT_SECRET_SET: !!process.env.JWT_SECRET
+        },
+        database: {
+            connected: isConnected,
+            lastError: null
+        },
+        queue: {
+            status: 'unknown'
+        }
+    };
+
+    // Test MongoDB connection
+    if (!process.env.MONGODB_URI) {
+        diagnostics.database.lastError = 'MONGODB_URI is not set';
+    } else {
+        try {
+            await mongoose.connect(process.env.MONGODB_URI, {
+                serverSelectionTimeoutMS: 3000,
+                connectTimeoutMS: 3000
+            });
+            diagnostics.database.connected = true;
+            diagnostics.database.lastError = null;
+            // Disconnect immediately to avoid pooling issues
+            await mongoose.connection.close();
+        } catch (err) {
+            diagnostics.database.lastError = err.message;
+        }
+    }
+
+    // Test queue
+    try {
+        if (process.env.REDIS_URL) {
+            diagnostics.queue.config = 'REDIS_URL';
+        } else if (process.env.REDIS_HOST) {
+            diagnostics.queue.config = `REDIS_HOST:REDIS_PORT (${process.env.REDIS_HOST}:${process.env.REDIS_PORT || '6379'})`;
+        } else {
+            diagnostics.queue.config = 'Using defaults (127.0.0.1:6379)';
+        }
+        diagnostics.queue.status = 'configured';
+    } catch (err) {
+        diagnostics.queue.lastError = err.message;
+    }
+
+    res.json(diagnostics);
+});
+
 app.get('/api/auth/seed', async (req, res) => {
     try {
         if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD || !process.env.ADMIN_NAME) {
