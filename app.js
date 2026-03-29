@@ -720,7 +720,7 @@
                 }
                 
                 // Show sending progress
-                progressDiv.innerHTML = '⏳ Queueing ' + groupPreviewCount + ' emails...';
+                progressDiv.innerHTML = '⏳ Queueing ' + totalRecipients + ' emails...';
                 progressDiv.style.background = '#eff6ff';
                 progressDiv.style.borderColor = '#003087';
                 progressDiv.style.display = 'block';
