@@ -196,7 +196,46 @@ function createTransporter() {
     });
 }
 
-// ── Send Email Route (Using Job Queue) ────────────────────────────────────────
+// ── Direct Email Sending (Fallback when Queue/Redis unavailable) ──────────────
+async function sendEmailDirect(recipient, subject, body, from, attachments = [], recipientName = null) {
+    try {
+        const transporter = createTransporter();
+        
+        // Personalize body
+        const personalBody = body
+            .replace(/\{name\}/gi, recipientName || recipient)
+            .replace(/\{email\}/gi, recipient);
+        
+        const result = await transporter.sendMail({
+            from: from,
+            to: recipient,
+            subject: subject,
+            html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+                ${personalBody.replace(/\n/g, '<br>')}
+                <br><br>
+                <footer style="font-size:12px;color:#666;margin-top:30px;border-top:1px solid #eee;padding-top:15px;">
+                    <p>This email was sent by Trugydex Email Campaign Platform</p>
+                </footer>
+            </div>`,
+            text: personalBody,
+            attachments: attachments && attachments.length > 0
+                ? attachments.map(att => ({
+                    filename: att.filename,
+                    content: Buffer.from(att.content, 'base64'),
+                    contentType: att.contentType
+                }))
+                : []
+        });
+        
+        console.log(`✓ Direct email sent to ${recipient} (Message ID: ${result.messageId})`);
+        return { success: true, recipient, messageId: result.messageId, method: 'direct' };
+    } catch (error) {
+        console.error(`✗ Failed to send direct email to ${recipient}:`, error.message);
+        throw error;
+    }
+}
+
+// ── Send Email Route (Using Job Queue with Fallback) ───────────────────────────
 app.post('/api/email/send', authMiddleware, async (req, res) => {
     try {
         await connectDB();
@@ -226,10 +265,14 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
         }
 
         const fromEmail = `"${process.env.GMAIL_SENDER_NAME || 'Trugydex'}" <${process.env.GMAIL_USER}>`;
-        const jobs = [];
+        const queuedJobs = [];
+        const directSent = [];
+        const failedEmails = [];
+        let queueAvailable = true;
         
+        // Try to use queue first (async, better for bulk)
         try {
-            // Add each email to the queue
+            console.log('📧 Attempting to queue emails via Redis...');
             for (let i = 0; i < group.emails.length; i++) {
                 const recipientEmail = group.emails[i];
                 const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
@@ -251,18 +294,48 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
                     removeOnFail: false
                 });
                 
-                jobs.push(job.id);
+                queuedJobs.push(job.id);
             }
+            console.log(`✓ Successfully queued ${queuedJobs.length} emails via Redis queue`);
         } catch (queueErr) {
-            console.error('Queue error:', queueErr.message);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to queue emails: ' + queueErr.message
-            });
+            // Queue failed - fallback to direct sending
+            console.warn('⚠️ Queue unavailable (Redis not configured), falling back to direct email sending...');
+            queueAvailable = false;
+            console.warn('Queue error:', queueErr.message);
+            
+            console.log('📧 Sending emails directly (synchronously)...');
+            for (let i = 0; i < group.emails.length; i++) {
+                const recipientEmail = group.emails[i];
+                const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+                
+                try {
+                    const result = await sendEmailDirect(
+                        recipientEmail,
+                        subject,
+                        body,
+                        fromEmail,
+                        attachments || [],
+                        recipientName
+                    );
+                    directSent.push(result);
+                } catch (sendErr) {
+                    console.error(`✗ Failed to send to ${recipientEmail}:`, sendErr.message);
+                    failedEmails.push(recipientEmail);
+                }
+            }
+            
+            if (directSent.length > 0) {
+                console.log(`✓ Successfully sent ${directSent.length} emails directly`);
+            }
+            if (failedEmails.length > 0) {
+                console.warn(`⚠️ Failed to send ${failedEmails.length} emails:`, failedEmails);
+            }
         }
 
         // Save campaign to DB
         try {
+            const sentCount = queuedJobs.length + directSent.length;
+            const status = queueAvailable ? 'queued' : (sentCount > 0 ? 'sent' : 'failed');
             const campaign = await Campaign.create({
                 name: campaignName || 'Untitled Campaign',
                 groupId,
@@ -270,17 +343,32 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
                 subject,
                 body,
                 recipientCount: group.emails.length,
-                status: 'queued',
-                sentBy: req.user.userId
+                sentCount: directSent.length,
+                status: status,
+                sentBy: req.user.userId,
+                method: queueAvailable ? 'queue' : 'direct'
             });
 
-            res.json({
+            const response = {
                 success: true,
-                message: `Campaign queued! ${group.emails.length} emails scheduled to be sent.`,
                 campaignId: campaign._id,
                 totalEmails: group.emails.length,
-                queuedJobs: jobs.length
-            });
+                method: queueAvailable ? 'queue' : 'direct'
+            };
+
+            if (queueAvailable) {
+                response.message = `✅ Campaign queued! ${group.emails.length} emails scheduled (async via Redis queue).`;
+                response.queuedJobs = queuedJobs.length;
+            } else {
+                response.message = `✅ Emails sent directly: ${directSent.length} successful${failedEmails.length > 0 ? `, ${failedEmails.length} failed` : ''}.`;
+                response.sentDirectly = directSent.length;
+                response.failed = failedEmails.length;
+                if (failedEmails.length > 0) {
+                    response.failedEmails = failedEmails.slice(0, 10); // Show first 10
+                }
+            }
+
+            res.json(response);
         } catch (dbErr) {
             console.error('Database error:', dbErr.message);
             return res.status(500).json({
@@ -291,7 +379,7 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
 
     } catch (e) {
         console.error('Email send endpoint error:', e.message, e.stack);
-        res.status(500).json({ success: false, message: 'Failed to queue emails: ' + e.message });
+        res.status(500).json({ success: false, message: 'Server error: ' + e.message });
     }
 });
 
