@@ -543,7 +543,7 @@
         // ─── Attachment Logic ───────────────────────────────────────────
         let attachedFiles = [];
         const MAX_FILES = 5;
-        const MAX_SIZE_MB = 100;
+        const MAX_SIZE_MB = 10;
 
         function getFileIcon(name) {
             const ext = name.split('.').pop().toLowerCase();
@@ -581,7 +581,7 @@
         function processAttachments(files) {
             for (const file of files) {
                 if (attachedFiles.length >= MAX_FILES) { alert('Maximum ' + MAX_FILES + ' files allowed.'); break; }
-                if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds 100 MB limit and was skipped.'); continue; }
+                if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds 10 MB limit and was skipped.'); continue; }
                 if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) { alert('"' + file.name + '" is already attached.'); continue; }
                 attachedFiles.push(file);
             }
