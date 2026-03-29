@@ -84,7 +84,6 @@ emailQueue.on('failed', (job, err) => {
 
 let isConnected = false;
 
-let isConnected = false;
 async function connectDB() {
     if (isConnected) return;
     await mongoose.connect(process.env.MONGODB_URI);

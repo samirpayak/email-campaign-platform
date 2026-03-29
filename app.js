@@ -283,11 +283,11 @@
             }
         }
         
-        function switchTab(tab) {
+        function switchTab(tab, evt) {
             document.querySelectorAll('.tab-panel').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            event.target.classList.add('active');
+            if (evt && evt.target) evt.target.classList.add('active');
             if (tab === 'compose') updateGroupDropdown();
             if (tab === 'userlog') renderUserLog();
             if (tab === 'managegroups') loadAllGroups();
