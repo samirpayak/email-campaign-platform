@@ -686,11 +686,25 @@
                 // Auto prepend Dear {name} - replaced per recipient by server
                 var finalBody = 'Dear {name},<br><br>' + body.replace(/\n/g, '<br>');
 
+                const attachmentData = [];
+                for (const file of attachedFiles) {
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                        reader.readAsDataURL(file);
+                    });
+                    attachmentData.push({
+                        filename: file.name,
+                        content: base64,
+                        contentType: file.type || 'application/octet-stream'
+                    });
+                }
                 const data = await apiCall('/email/send', 'POST', {
                     groupId: idx,
                     subject,
                     body: finalBody + signatureHtml,
-                    campaignName: campaignName || 'Untitled Campaign'
+                    campaignName: campaignName || 'Untitled Campaign',
+                    attachments: attachmentData
                 }, true);
 
                 progressDiv.style.background = '#f0fdf4';
