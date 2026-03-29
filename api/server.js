@@ -348,7 +348,7 @@ app.get('/api/health', (req, res) => {
             mongodb: !!process.env.MONGODB_URI,
             jwt: !!process.env.JWT_SECRET,
             gmail: !!process.env.GMAIL_USER && !!process.env.GMAIL_APP_PASSWORD,
-            redis: !!process.env.REDIS_HOST
+            redis: !!process.env.REDIS_URL || !!process.env.REDIS_HOST
         }
     };
     res.json(health);
