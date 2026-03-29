@@ -99,8 +99,14 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
                             Sent by Trugydex Email Platform | trugydex.in
                         </p>
                     </div>`,
-                    text: personalBody
-                    attachments: mailAttachments
+                    text: personalBody,
+                    attachments: attachments && attachments.length > 0
+                        ? attachments.map(att => ({
+                            filename: att.filename,
+                            content: Buffer.from(att.content, 'base64'),
+                            contentType: att.contentType
+                        }))
+                        : []
                 });
                 sent++;
             } catch (err) {
