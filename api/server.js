@@ -8,8 +8,8 @@ const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(cors({ origin: '*', credentials: true }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 let isConnected = false;
 async function connectDB() {
@@ -54,7 +54,7 @@ function createTransporter() {
 app.post('/api/email/send', authMiddleware, async (req, res) => {
     try {
         await connectDB();
-        const { groupId, subject, body, campaignName } = req.body;
+        const { groupId, subject, body, campaignName, attachments } = req.body;
 
         if (!groupId || !subject || !body) {
             return res.status(400).json({ success: false, message: 'Group, subject and body are required.' });
@@ -100,6 +100,7 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
                         </p>
                     </div>`,
                     text: personalBody
+                    attachments: mailAttachments
                 });
                 sent++;
             } catch (err) {
