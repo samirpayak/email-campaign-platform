@@ -322,6 +322,56 @@ app.post('/api/groups', authMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// ── Get Group Details with All Emails ──────────────────────────────────────
+app.get('/api/groups/:id', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const group = await Group.findById(req.params.id);
+        if (!group) return res.status(404).json({ success: false, message: 'Group not found.' });
+        res.json({ success: true, group });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ── Update Group (Name, Description, Emails) ───────────────────────────────
+app.put('/api/groups/:id', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const { name, description, emails } = req.body;
+        
+        if (!name) return res.status(400).json({ success: false, message: 'Group name required.' });
+        if (!emails || emails.length === 0) return res.status(400).json({ success: false, message: 'At least one valid email required.' });
+        
+        // Validate emails
+        const valid = emails.filter(e => e && typeof e === 'string' && e.includes('@') && e.includes('.'));
+        if (valid.length === 0) return res.status(400).json({ success: false, message: 'No valid emails provided.' });
+        
+        const group = await Group.findByIdAndUpdate(
+            req.params.id,
+            {
+                name,
+                description: description || '',
+                emails: valid,
+                recipientCount: valid.length
+            },
+            { new: true }
+        );
+        
+        if (!group) return res.status(404).json({ success: false, message: 'Group not found.' });
+        
+        res.json({ success: true, message: 'Group "' + name + '" updated with ' + valid.length + ' recipients.', group });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ── Delete Group ────────────────────────────────────────────────────────────
+app.delete('/api/groups/:id', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const group = await Group.findByIdAndDelete(req.params.id);
+        if (!group) return res.status(404).json({ success: false, message: 'Group not found.' });
+        res.json({ success: true, message: 'Group "' + group.name + '" deleted successfully.' });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 app.get('/api/campaigns/stats', authMiddleware, async (req, res) => {
     try {
         await connectDB();
