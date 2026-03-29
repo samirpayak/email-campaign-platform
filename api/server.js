@@ -92,7 +92,7 @@ emailQueue.process(async (job) => {
             .replace(/\{email\}/gi, recipient);
         
         const result = await transporter.sendMail({
-            from: from,            https://mail.trugydex.in/api/health
+            from: from,
             to: recipient,
             subject: subject,
             html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
