@@ -4,16 +4,28 @@
   "description": "Trugydex Email Campaign Manager Backend",
   "main": "api/server.js",
   "scripts": {
-    "start": "node api/server.js"
+    "start": "node api/server.js",
+    "dev": "nodemon api/server.js",
+    "test": "jest --detectOpenHandles",
+    "test:watch": "jest --watch",
+    "build": "npm install"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "bull": "^4.11.4",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "nodemailer": "^6.9.8",
+    "redis": "^4.6.12",
     "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
   }
 }

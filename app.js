@@ -14,7 +14,17 @@
         // ===========================================
         
         // ── Backend API Configuration ──────────────────────────────────────
-        const API_BASE = 'https://mail.trugydex.in/api';
+        // Auto-detect API base URL based on environment
+        const API_BASE = (() => {
+            // In production (Vercel), use same domain
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                return window.location.origin + '/api';
+            }
+            // In development, use localhost
+            return 'http://localhost:5000/api';
+        })();
+
+        console.log('✓ API Base configured:', API_BASE);
 
         async function apiCall(endpoint, method, body, requiresAuth) {
             const headers = { 'Content-Type': 'application/json' };
@@ -543,7 +553,7 @@
         // ─── Attachment Logic ───────────────────────────────────────────
         let attachedFiles = [];
         const MAX_FILES = 5;
-        const MAX_SIZE_MB = 100;
+        const MAX_SIZE_MB = 10;
 
         function getFileIcon(name) {
             const ext = name.split('.').pop().toLowerCase();
@@ -581,7 +591,7 @@
         function processAttachments(files) {
             for (const file of files) {
                 if (attachedFiles.length >= MAX_FILES) { alert('Maximum ' + MAX_FILES + ' files allowed.'); break; }
-                if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds 100 MB limit and was skipped.'); continue; }
+                if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds 10 MB limit and was skipped.'); continue; }
                 if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) { alert('"' + file.name + '" is already attached.'); continue; }
                 attachedFiles.push(file);
             }
@@ -700,6 +710,13 @@
                         contentType: file.type || 'application/octet-stream'
                     });
                 }
+                
+                // Show sending progress
+                progressDiv.innerHTML = '⏳ Queueing ' + groupPreviewCount + ' emails...';
+                progressDiv.style.background = '#eff6ff';
+                progressDiv.style.borderColor = '#003087';
+                progressDiv.style.display = 'block';
+
                 const data = await apiCall('/email/send', 'POST', {
                     groupId: idx,
                     subject,
@@ -708,9 +725,19 @@
                     attachments: attachmentData
                 }, true);
 
+                // Success response
                 progressDiv.style.background = '#f0fdf4';
                 progressDiv.style.borderColor = '#2E7D32';
-                progressDiv.innerHTML = '&#10003; ' + data.message;
+                progressDiv.innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">✓</div>
+                        <strong>${data.message}</strong><br>
+                        <small style="color: var(--text-secondary); margin-top: 8px; display: block;">
+                            Campaign ID: ${data.campaignId}<br>
+                            ${data.totalEmails} emails queued for sending
+                        </small>
+                    </div>
+                `;
 
                 if (btn) { btn.innerHTML = 'Send Campaign'; btn.disabled = false; btn.style.background = ''; }
 
@@ -731,7 +758,15 @@
             } catch(err) {
                 progressDiv.style.background = '#fef2f2';
                 progressDiv.style.borderColor = '#ef4444';
-                progressDiv.innerHTML = '&#10060; Failed: ' + err.message;
+                progressDiv.innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">✗</div>
+                        <strong>Campaign Failed</strong><br>
+                        <small style="color: var(--text-secondary); margin-top: 8px; display: block;">
+                            ${err.message}
+                        </small>
+                    </div>
+                `;
                 if (btn) { btn.innerHTML = 'Send Campaign'; btn.disabled = false; btn.style.background = ''; }
             }
         }
