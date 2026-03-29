@@ -5,11 +5,84 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const Queue = require('bull');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const https = require('https');
+const xml2js = require('xml2js');
 
 const app = express();
+
+// ─── Security & Middleware Setup ───────────────────────────────────────────
+app.use(helmet());
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// ─── Rate Limiting ─────────────────────────────────────────────────────────
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100
+});
+app.use('/api/', limiter);
+
+// ─── Email Job Queue Setup ────────────────────────────────────────────────
+const emailQueue = new Queue('email-sending', {
+    redis: {
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: process.env.REDIS_PORT || 6379
+    }
+});
+
+// Email job processor
+emailQueue.process(async (job) => {
+    const { recipient, subject, body, from, attachments, recipientName } = job.data;
+    const transporter = createTransporter();
+    
+    // Personalize body
+    const personalBody = body
+        .replace(/\{name\}/gi, recipientName || recipient)
+        .replace(/\{email\}/gi, recipient);
+    
+    try {
+        await transporter.sendMail({
+            from: from,
+            to: recipient,
+            subject: subject,
+            html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+                ${personalBody.replace(/\n/g, '<br>')}
+                <br><br>
+                <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+                <p style="font-size:12px;color:#999;text-align:center;">
+                    Sent by Trugydex Email Platform | trugydex.in
+                </p>
+            </div>`,
+            text: personalBody,
+            attachments: attachments && attachments.length > 0
+                ? attachments.map(att => ({
+                    filename: att.filename,
+                    content: Buffer.from(att.content, 'base64'),
+                    contentType: att.contentType
+                }))
+                : []
+        });
+        return { success: true, recipient };
+    } catch (error) {
+        console.error(`Failed to send email to ${recipient}:`, error.message);
+        throw error; // Re-throw so Bull can retry
+    }
+});
+
+// Job completion and failure handlers
+emailQueue.on('completed', (job) => {
+    console.log(`✓ Email job ${job.id} completed`);
+});
+
+emailQueue.on('failed', (job, err) => {
+    console.error(`✗ Email job ${job.id} failed:`, err.message);
+});
+
+let isConnected = false;
 
 let isConnected = false;
 async function connectDB() {
@@ -50,7 +123,7 @@ function createTransporter() {
     });
 }
 
-// ── Send Email Route ──────────────────────────────────────────────────────────
+// ── Send Email Route (Using Job Queue) ────────────────────────────────────────
 app.post('/api/email/send', authMiddleware, async (req, res) => {
     try {
         await connectDB();
@@ -68,84 +141,86 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
         }
 
         const transporter = createTransporter();
+        await transporter.verify(); // Verify connection first
 
-        // Verify Gmail connection first
-        await transporter.verify();
-
-        let sent = 0;
-        let failed = 0;
-        const errors = [];
-
-        // Send to each recipient with delay
+        const fromEmail = `"${process.env.GMAIL_SENDER_NAME || 'Trugydex'}" <${process.env.GMAIL_USER}>`;
+        const jobs = [];
+        
+        // Add each email to the queue
         for (let i = 0; i < group.emails.length; i++) {
             const recipientEmail = group.emails[i];
             const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
-
-            // Personalise body with name
-            const personalBody = body
-                .replace(/\{name\}/gi, recipientName)
-                .replace(/\{email\}/gi, recipientEmail);
-
-            try {
-                await transporter.sendMail({
-                    from: `"${process.env.GMAIL_SENDER_NAME || 'Trugydex'}" <${process.env.GMAIL_USER}>`,
-                    to: recipientEmail,
-                    subject: subject,
-                    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-                        ${personalBody.replace(/\n/g, '<br>')}
-                        <br><br>
-                        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-                        <p style="font-size:12px;color:#999;text-align:center;">
-                            Sent by Trugydex Email Platform | trugydex.in
-                        </p>
-                    </div>`,
-                    text: personalBody,
-                    attachments: attachments && attachments.length > 0
-                        ? attachments.map(att => ({
-                            filename: att.filename,
-                            content: Buffer.from(att.content, 'base64'),
-                            contentType: att.contentType
-                        }))
-                        : []
-                });
-                sent++;
-            } catch (err) {
-                failed++;
-                errors.push({ email: recipientEmail, error: err.message });
-            }
-
-            // Delay 2 seconds between emails to avoid spam filters
-            if (i < group.emails.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
+            
+            const job = await emailQueue.add({
+                recipient: recipientEmail,
+                subject: subject,
+                body: body,
+                from: fromEmail,
+                attachments: attachments || [],
+                recipientName: recipientName
+            }, {
+                attempts: parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 2000
+                },
+                removeOnComplete: true,
+                removeOnFail: false
+            });
+            
+            jobs.push(job.id);
         }
 
         // Save campaign to DB
-        await Campaign.create({
+        const campaign = await Campaign.create({
             name: campaignName || 'Untitled Campaign',
             groupId,
             groupName: group.name,
             subject,
             body,
-            recipientCount: sent,
-            status: failed === 0 ? 'sent' : 'partial',
+            recipientCount: group.emails.length,
+            status: 'queued',
             sentBy: req.user.userId
         });
 
         res.json({
             success: true,
-            message: `Campaign completed! Sent: ${sent}, Failed: ${failed}`,
-            sent,
-            failed,
-            errors: errors.slice(0, 5)
+            message: `Campaign queued! ${group.emails.length} emails scheduled to be sent.`,
+            campaignId: campaign._id,
+            totalEmails: group.emails.length,
+            queuedJobs: jobs.length
         });
 
     } catch (e) {
-        console.error('Email send error:', e);
-        res.status(500).json({ success: false, message: 'Email sending failed: ' + e.message });
+        console.error('Email queue error:', e);
+        res.status(500).json({ success: false, message: 'Failed to queue emails: ' + e.message });
     }
 });
 
+// ── Get Campaign Queue Status ──────────────────────────────────────────────────
+app.get('/api/campaigns/:campaignId/status', authMiddleware, async (req, res) => {
+    try {
+        await connectDB();
+        const campaign = await Campaign.findById(req.params.campaignId);
+        if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found.' });
+        
+        const queueCounts = await emailQueue.getJobCounts();
+        
+        res.json({
+            success: true,
+            campaign: {
+                id: campaign._id,
+                name: campaign.name,
+                status: campaign.status,
+                totalRecipients: campaign.recipientCount,
+                sentAt: campaign.sentAt
+            },
+            queue: queueCounts
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
 // ── Test Email Route ──────────────────────────────────────────────────────────
 app.post('/api/email/test', authMiddleware, async (req, res) => {
     try {
@@ -457,5 +532,33 @@ app.get('/api/nse/search', authMiddleware, async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════════
 
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found.' }));
+
+// ─── Server Startup ────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+    console.log(`✓ Trugydex API Server running on port ${PORT}`);
+    console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`✓ Email queue initialized (Bull/Redis)`);
+    if (!process.env.MONGODB_URI) {
+        console.warn('⚠️  Warning: MONGODB_URI not set in environment');
+    }
+    if (!process.env.JWT_SECRET) {
+        console.warn('⚠️  Warning: JWT_SECRET not set in environment');
+    }
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+        console.warn('⚠️  Warning: Gmail credentials not set in environment');
+    }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    server.close(async () => {
+        await emailQueue.close();
+        await mongoose.connection.close();
+        console.log('Server closed');
+        process.exit(0);
+    });
+});
 
 module.exports = app;
