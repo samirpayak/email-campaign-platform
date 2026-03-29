@@ -584,30 +584,25 @@ app.use((req, res) => res.status(404).json({ success: false, message: 'Route not
 
 // ─── Server Startup ────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-    console.log(`✓ Trugydex API Server running on port ${PORT}`);
-    console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`✓ Email queue initialized (Bull/Redis)`);
-    if (!process.env.MONGODB_URI) {
-        console.warn('⚠️  Warning: MONGODB_URI not set in environment');
-    }
-    if (!process.env.JWT_SECRET) {
-        console.warn('⚠️  Warning: JWT_SECRET not set in environment');
-    }
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-        console.warn('⚠️  Warning: Gmail credentials not set in environment');
-    }
-});
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, shutting down gracefully...');
-    server.close(async () => {
-        await emailQueue.close();
-        await mongoose.connection.close();
-        console.log('Server closed');
-        process.exit(0);
+// Only start server in local development, not on Vercel
+if (process.env.NODE_ENV !== 'production') {
+    const server = app.listen(PORT, () => {
+        console.log(`✓ Trugydex API Server running on port ${PORT}`);
+        console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`✓ Email queue initialized (Bull/Redis)`);
     });
-});
+
+    // Graceful shutdown
+    process.on('SIGTERM', async () => {
+        console.log('SIGTERM received, shutting down gracefully...');
+        server.close(async () => {
+            await emailQueue.close();
+            await mongoose.connection.close();
+            console.log('Server closed');
+            process.exit(0);
+        });
+    });
+}
 
 module.exports = app;
