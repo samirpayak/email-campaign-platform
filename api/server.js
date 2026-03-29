@@ -54,7 +54,7 @@ function createTransporter() {
 app.post('/api/email/send', authMiddleware, async (req, res) => {
     try {
         await connectDB();
-        const { groupId, subject, body, campaignName } = req.body;
+        const { groupId, subject, body, campaignName, attachments } = req.body;
 
         if (!groupId || !subject || !body) {
             return res.status(400).json({ success: false, message: 'Group, subject and body are required.' });
