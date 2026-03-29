@@ -92,7 +92,7 @@ emailQueue.process(async (job) => {
             .replace(/\{email\}/gi, recipient);
         
         const result = await transporter.sendMail({
-            from: from,
+            from: from,            https://mail.trugydex.in/api/health
             to: recipient,
             subject: subject,
             html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
@@ -235,7 +235,7 @@ async function sendEmailDirect(recipient, subject, body, from, attachments = [],
     }
 }
 
-// ── Send Email Route (Using Job Queue with Fallback) ───────────────────────────
+// ── Send Email Route (Non-blocking for Vercel Serverless) ───────────────────────
 app.post('/api/email/send', authMiddleware, async (req, res) => {
     try {
         await connectDB();
@@ -265,120 +265,113 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
         }
 
         const fromEmail = `"${process.env.GMAIL_SENDER_NAME || 'Trugydex'}" <${process.env.GMAIL_USER}>`;
-        const queuedJobs = [];
-        const directSent = [];
-        const failedEmails = [];
-        let queueAvailable = true;
         
-        // Try to use queue first (async, better for bulk)
+        // Create campaign record FIRST
+        let campaign;
         try {
-            console.log('📧 Attempting to queue emails via Redis...');
-            for (let i = 0; i < group.emails.length; i++) {
-                const recipientEmail = group.emails[i];
-                const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
-                
-                const job = await emailQueue.add({
-                    recipient: recipientEmail,
-                    subject: subject,
-                    body: body,
-                    from: fromEmail,
-                    attachments: attachments || [],
-                    recipientName: recipientName
-                }, {
-                    attempts: parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
-                    backoff: {
-                        type: 'exponential',
-                        delay: 2000
-                    },
-                    removeOnComplete: true,
-                    removeOnFail: false
-                });
-                
-                queuedJobs.push(job.id);
-            }
-            console.log(`✓ Successfully queued ${queuedJobs.length} emails via Redis queue`);
-        } catch (queueErr) {
-            // Queue failed - fallback to direct sending
-            console.warn('⚠️ Queue unavailable (Redis not configured), falling back to direct email sending...');
-            queueAvailable = false;
-            console.warn('Queue error:', queueErr.message);
-            
-            console.log('📧 Sending emails directly (synchronously)...');
-            for (let i = 0; i < group.emails.length; i++) {
-                const recipientEmail = group.emails[i];
-                const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
-                
-                try {
-                    const result = await sendEmailDirect(
-                        recipientEmail,
-                        subject,
-                        body,
-                        fromEmail,
-                        attachments || [],
-                        recipientName
-                    );
-                    directSent.push(result);
-                } catch (sendErr) {
-                    console.error(`✗ Failed to send to ${recipientEmail}:`, sendErr.message);
-                    failedEmails.push(recipientEmail);
-                }
-            }
-            
-            if (directSent.length > 0) {
-                console.log(`✓ Successfully sent ${directSent.length} emails directly`);
-            }
-            if (failedEmails.length > 0) {
-                console.warn(`⚠️ Failed to send ${failedEmails.length} emails:`, failedEmails);
-            }
-        }
-
-        // Save campaign to DB
-        try {
-            const sentCount = queuedJobs.length + directSent.length;
-            const status = queueAvailable ? 'queued' : (sentCount > 0 ? 'sent' : 'failed');
-            const campaign = await Campaign.create({
+            campaign = await Campaign.create({
                 name: campaignName || 'Untitled Campaign',
                 groupId,
                 groupName: group.name,
                 subject,
                 body,
                 recipientCount: group.emails.length,
-                sentCount: directSent.length,
-                status: status,
+                status: 'processing',
                 sentBy: req.user.userId,
-                method: queueAvailable ? 'queue' : 'direct'
+                method: process.env.REDIS_URL ? 'queue' : 'direct'
             });
-
-            const response = {
-                success: true,
-                campaignId: campaign._id,
-                totalEmails: group.emails.length,
-                method: queueAvailable ? 'queue' : 'direct'
-            };
-
-            if (queueAvailable) {
-                response.message = `✅ Campaign queued! ${group.emails.length} emails scheduled (async via Redis queue).`;
-                response.queuedJobs = queuedJobs.length;
-            } else {
-                response.message = `✅ Emails sent directly: ${directSent.length} successful${failedEmails.length > 0 ? `, ${failedEmails.length} failed` : ''}.`;
-                response.sentDirectly = directSent.length;
-                response.failed = failedEmails.length;
-                if (failedEmails.length > 0) {
-                    response.failedEmails = failedEmails.slice(0, 10); // Show first 10
-                }
-            }
-
-            res.json(response);
         } catch (dbErr) {
-            console.error('Database error:', dbErr.message);
+            console.error('Campaign creation error:', dbErr.message);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to save campaign: ' + dbErr.message
+                message: 'Failed to create campaign: ' + dbErr.message
             });
         }
 
+        // Return response IMMEDIATELY - don't wait for email processing!
+        res.json({
+            success: true,
+            campaignId: campaign._id,
+            totalEmails: group.emails.length,
+            method: process.env.REDIS_URL ? 'queue' : 'direct',
+            message: process.env.REDIS_URL 
+                ? `✅ Campaign queued! ${group.emails.length} emails scheduled (sending in background)`
+                : `✅ Campaign processing! Emails will be sent (sending in background)`
+        });
+
+        // Process emails in background (don't await, don't block)
+        // This runs AFTER response is sent
+        (async () => {
+            try {
+                console.log(`📧 Processing ${group.emails.length} emails for campaign ${campaign._id}...`);
+                
+                // Try queue first
+                if (process.env.REDIS_URL) {
+                    try {
+                        console.log('📧 Queuing emails via Redis...');
+                        for (let i = 0; i < group.emails.length; i++) {
+                            const recipientEmail = group.emails[i];
+                            const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+                            
+                            await emailQueue.add({
+                                recipient: recipientEmail,
+                                subject: subject,
+                                body: body,
+                                from: fromEmail,
+                                attachments: attachments || [],
+                                recipientName: recipientName,
+                                campaignId: campaign._id
+                            }, {
+                                attempts: parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
+                                backoff: {
+                                    type: 'exponential',
+                                    delay: 2000
+                                },
+                                removeOnComplete: true,
+                                removeOnFail: false
+                            });
+                        }
+                        console.log(`✓ Queued ${group.emails.length} emails successfully`);
+                        await Campaign.findByIdAndUpdate(campaign._id, { status: 'queued', sentCount: group.emails.length });
+                    } catch (queueErr) {
+                        console.error('Queue error, falling back to direct send:', queueErr.message);
+                        // Fallback to direct send
+                        let sentCount = 0;
+                        for (let i = 0; i < group.emails.length; i++) {
+                            const recipientEmail = group.emails[i];
+                            const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+                            try {
+                                await sendEmailDirect(recipientEmail, subject, body, fromEmail, attachments || [], recipientName);
+                                sentCount++;
+                            } catch (e) {
+                                console.error(`Failed to send to ${recipientEmail}:`, e.message);
+                            }
+                        }
+                        await Campaign.findByIdAndUpdate(campaign._id, { status: 'sent', sentCount: sentCount });
+                    }
+                } else {
+                    // Direct send
+                    let sentCount = 0;
+                    for (let i = 0; i < group.emails.length; i++) {
+                        const recipientEmail = group.emails[i];
+                        const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+                        try {
+                            await sendEmailDirect(recipientEmail, subject, body, fromEmail, attachments || [], recipientName);
+                            sentCount++;
+                        } catch (e) {
+                            console.error(`Failed to send to ${recipientEmail}:`, e.message);
+                        }
+                    }
+                    await Campaign.findByIdAndUpdate(campaign._id, { status: 'sent', sentCount: sentCount });
+                }
+            } catch (bgErr) {
+                console.error('Background email processing error:', bgErr.message);
+                await Campaign.findByIdAndUpdate(campaign._id, { status: 'error' }).catch(() => {});
+            }
+        })().catch(err => console.error('Unhandled background error:', err.message));
+
     } catch (e) {
-        console.error('Email send endpoint error:', e.message, e.stack);
+        console.error('Email send endpoint error:', e.message);
         res.status(500).json({ success: false, message: 'Server error: ' + e.message });
     }
 });
