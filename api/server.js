@@ -53,25 +53,45 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // ─── Email Job Queue Setup ────────────────────────────────────────────────
-const emailQueue = new Queue('email-sending', {
-    redis: {
+// Support both Redis URL (Upstash) and host:port configuration
+let redisConfig;
+if (process.env.REDIS_URL) {
+    // Upstash Redis URL format: redis://[user]:[password]@[host]:[port]
+    redisConfig = process.env.REDIS_URL;
+    console.log('✓ Using Redis URL from REDIS_URL environment variable');
+} else {
+    // Local Redis or default host:port
+    redisConfig = {
         host: process.env.REDIS_HOST || '127.0.0.1',
-        port: process.env.REDIS_PORT || 6379
-    }
+        port: parseInt(process.env.REDIS_PORT || '6379')
+    };
+    console.log(`✓ Using Redis host: ${redisConfig.host}:${redisConfig.port}`);
+}
+
+const emailQueue = new Queue('email-sending', redisConfig);
+
+// Handle queue connection errors
+emailQueue.on('error', (err) => {
+    console.error('❌ Queue connection error:', err.message);
+});
+
+emailQueue.on('ready', () => {
+    console.log('✓ Email queue ready');
 });
 
 // Email job processor
 emailQueue.process(async (job) => {
     const { recipient, subject, body, from, attachments, recipientName } = job.data;
-    const transporter = createTransporter();
-    
-    // Personalize body
-    const personalBody = body
-        .replace(/\{name\}/gi, recipientName || recipient)
-        .replace(/\{email\}/gi, recipient);
     
     try {
-        await transporter.sendMail({
+        const transporter = createTransporter();
+        
+        // Personalize body
+        const personalBody = body
+            .replace(/\{name\}/gi, recipientName || recipient)
+            .replace(/\{email\}/gi, recipient);
+        
+        const result = await transporter.sendMail({
             from: from,
             to: recipient,
             subject: subject,
@@ -92,10 +112,12 @@ emailQueue.process(async (job) => {
                 }))
                 : []
         });
-        return { success: true, recipient };
+        
+        console.log(`✓ Email sent to ${recipient} (Message ID: ${result.messageId})`);
+        return { success: true, recipient, messageId: result.messageId };
     } catch (error) {
-        console.error(`Failed to send email to ${recipient}:`, error.message);
-        throw error; // Re-throw so Bull can retry
+        console.error(`✗ Failed to send email to ${recipient}:`, error.message);
+        throw error; // Re-throw so Bull can retry with backoff
     }
 });
 
@@ -191,59 +213,84 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, message: 'No emails in this group.' });
         }
 
-        const transporter = createTransporter();
-        await transporter.verify(); // Verify connection first
+        // Verify Gmail credentials
+        try {
+            const transporter = createTransporter();
+            await transporter.verify();
+        } catch (err) {
+            console.error('Gmail verification failed:', err.message);
+            return res.status(500).json({
+                success: false,
+                message: 'Gmail not configured: ' + err.message
+            });
+        }
 
         const fromEmail = `"${process.env.GMAIL_SENDER_NAME || 'Trugydex'}" <${process.env.GMAIL_USER}>`;
         const jobs = [];
         
-        // Add each email to the queue
-        for (let i = 0; i < group.emails.length; i++) {
-            const recipientEmail = group.emails[i];
-            const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
-            
-            const job = await emailQueue.add({
-                recipient: recipientEmail,
-                subject: subject,
-                body: body,
-                from: fromEmail,
-                attachments: attachments || [],
-                recipientName: recipientName
-            }, {
-                attempts: parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
-                backoff: {
-                    type: 'exponential',
-                    delay: 2000
-                },
-                removeOnComplete: true,
-                removeOnFail: false
+        try {
+            // Add each email to the queue
+            for (let i = 0; i < group.emails.length; i++) {
+                const recipientEmail = group.emails[i];
+                const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+                
+                const job = await emailQueue.add({
+                    recipient: recipientEmail,
+                    subject: subject,
+                    body: body,
+                    from: fromEmail,
+                    attachments: attachments || [],
+                    recipientName: recipientName
+                }, {
+                    attempts: parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 2000
+                    },
+                    removeOnComplete: true,
+                    removeOnFail: false
+                });
+                
+                jobs.push(job.id);
+            }
+        } catch (queueErr) {
+            console.error('Queue error:', queueErr.message);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to queue emails: ' + queueErr.message
             });
-            
-            jobs.push(job.id);
         }
 
         // Save campaign to DB
-        const campaign = await Campaign.create({
-            name: campaignName || 'Untitled Campaign',
-            groupId,
-            groupName: group.name,
-            subject,
-            body,
-            recipientCount: group.emails.length,
-            status: 'queued',
-            sentBy: req.user.userId
-        });
+        try {
+            const campaign = await Campaign.create({
+                name: campaignName || 'Untitled Campaign',
+                groupId,
+                groupName: group.name,
+                subject,
+                body,
+                recipientCount: group.emails.length,
+                status: 'queued',
+                sentBy: req.user.userId
+            });
 
-        res.json({
-            success: true,
-            message: `Campaign queued! ${group.emails.length} emails scheduled to be sent.`,
-            campaignId: campaign._id,
-            totalEmails: group.emails.length,
-            queuedJobs: jobs.length
-        });
+            res.json({
+                success: true,
+                message: `Campaign queued! ${group.emails.length} emails scheduled to be sent.`,
+                campaignId: campaign._id,
+                totalEmails: group.emails.length,
+                queuedJobs: jobs.length
+            });
+        } catch (dbErr) {
+            console.error('Database error:', dbErr.message);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to save campaign: ' + dbErr.message
+            });
+        }
 
     } catch (e) {
-        console.error('Email queue error:', e);
+        console.error('Email send endpoint error:', e.message, e.stack);
         res.status(500).json({ success: false, message: 'Failed to queue emails: ' + e.message });
     }
 });
