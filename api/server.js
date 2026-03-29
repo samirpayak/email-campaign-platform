@@ -307,6 +307,11 @@ app.get('/api/health', (req, res) => {
     res.json(health);
 });
 
+// ── Simple Ping Endpoint (No Auth Required) ────────────────────────────────────
+app.get('/api/ping', (req, res) => {
+    res.json({ success: true, message: 'API is reachable' });
+});
+
 app.get('/api/auth/seed', async (req, res) => {
     try {
         if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD || !process.env.ADMIN_NAME) {
@@ -530,9 +535,6 @@ app.post('/api/campaigns', authMiddleware, async (req, res) => {
 // NSE CIRCULAR ROUTES (NEW MODULE - COMPLETELY SEPARATE)
 // ════════════════════════════════════════════════════════════════════════════════
 
-const xml2js = require('xml2js');
-const https = require('https');
-
 // ── NSE Circular Schema ───────────────────────────────────────────────────────
 const nseCircularSchema = new mongoose.Schema({
     title: String,
@@ -618,7 +620,8 @@ app.post('/api/nse/fetch', authMiddleware, async (req, res) => {
         const result = await fetchNSECirculars();
         res.json(result);
     } catch (error) {
-        res.status(500).json(error);
+        console.error('NSE Fetch Error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to fetch NSE circulars' });
     }
 });
 
