@@ -686,6 +686,7 @@
                 // Auto prepend Dear {name} - replaced per recipient by server
                 var finalBody = 'Dear {name},<br><br>' + body.replace(/\n/g, '<br>');
 
+                // Convert attachments to base64
                 const attachmentData = [];
                 for (const file of attachedFiles) {
                     const base64 = await new Promise((resolve) => {
