@@ -290,6 +290,7 @@
             event.target.classList.add('active');
             if (tab === 'compose') updateGroupDropdown();
             if (tab === 'userlog') renderUserLog();
+            if (tab === 'managegroups') loadAllGroups();
         }
         
         // File Upload Handlers
@@ -553,7 +554,7 @@
         // ─── Attachment Logic ───────────────────────────────────────────
         let attachedFiles = [];
         const MAX_FILES = 5;
-        const MAX_SIZE_MB = 10;
+        const MAX_SIZE_MB = 100;
 
         function getFileIcon(name) {
             const ext = name.split('.').pop().toLowerCase();
@@ -591,7 +592,7 @@
         function processAttachments(files) {
             for (const file of files) {
                 if (attachedFiles.length >= MAX_FILES) { alert('Maximum ' + MAX_FILES + ' files allowed.'); break; }
-                if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds 10 MB limit and was skipped.'); continue; }
+                if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert('"' + file.name + '" exceeds 100 MB limit and was skipped.'); continue; }
                 if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) { alert('"' + file.name + '" is already attached.'); continue; }
                 attachedFiles.push(file);
             }
@@ -851,4 +852,195 @@
             a.download = 'trugydex_sample_emails.csv';
             a.click();
             URL.revokeObjectURL(url);
+        }
+
+        // ────────────────────────────────────────────────────────────────
+        // GROUP MANAGEMENT FUNCTIONS
+        // ────────────────────────────────────────────────────────────────
+
+        let currentEditingGroupId = null;
+        let currentEditingGroupEmails = [];
+
+        async function loadAllGroups() {
+            try {
+                const data = await apiCall('/groups', 'GET', null, true);
+                const tbody = document.getElementById('groupsTableBody');
+                
+                if (data.groups.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-secondary);">No groups created yet</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.groups.map(group => `
+                    <tr>
+                        <td style="font-weight:600;color:var(--primary-blue);">${group.name}</td>
+                        <td>${group.description || '<span style="color:var(--text-secondary);">No description</span>'}</td>
+                        <td style="text-align:center;"><span style="background:var(--light-blue);padding:4px 10px;border-radius:4px;font-weight:600;font-size:12px;">${group.recipientCount}</span></td>
+                        <td style="text-align:center;">
+                            <button onclick="openEditModal('${group._id}')" style="background:#e0f2fe;color:#0369a1;border:none;padding:6px 12px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;margin-right:4px;">✏️ Edit</button>
+                            <button onclick="deleteGroup('${group._id}')" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 12px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                alert('Failed to load groups: ' + err.message);
+            }
+        }
+
+        async function openEditModal(groupId) {
+            try {
+                // Fetch full group details with emails
+                const response = await fetch(API_BASE + '/groups/' + groupId, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('tg_token') }
+                });
+                const data = await response.json();
+                
+                if (!data.success) {
+                    alert('Failed to load group details');
+                    return;
+                }
+
+                const group = data.group;
+                currentEditingGroupId = groupId;
+                currentEditingGroupEmails = group.emails || [];
+
+                // Populate form
+                document.getElementById('editGroupName').value = group.name;
+                document.getElementById('editGroupDesc').value = group.description || '';
+                document.getElementById('currentEmailCount').textContent = currentEditingGroupEmails.length;
+
+                // Display emails
+                renderCurrentEmails();
+
+                // Reset form
+                document.getElementById('addEmailForm').style.display = 'none';
+                document.getElementById('newEmail').value = '';
+                document.getElementById('newEmailName').value = '';
+
+                // Show modal
+                document.getElementById('editGroupModal').style.display = 'flex';
+            } catch (err) {
+                alert('Error loading group: ' + err.message);
+            }
+        }
+
+        function renderCurrentEmails() {
+            const emailsList = document.getElementById('currentEmailsList');
+            if (currentEditingGroupEmails.length === 0) {
+                emailsList.innerHTML = '<p style="color:var(--text-secondary);">No emails in this group</p>';
+                return;
+            }
+
+            emailsList.innerHTML = currentEditingGroupEmails.map((email, index) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;margin-bottom:6px;background:white;border-radius:6px;border:1px solid var(--border-color);">
+                    <span>${email}</span>
+                    <button onclick="removeEmailFromGroup(${index})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;padding:0;">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function toggleAddEmailForm() {
+            const form = document.getElementById('addEmailForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if (form.style.display === 'block') {
+                document.getElementById('newEmail').focus();
+            }
+        }
+
+        async function addEmailToGroup() {
+            const email = document.getElementById('newEmail').value.trim();
+            
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+
+            if (!email.includes('@') || !email.includes('.')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+
+            if (currentEditingGroupEmails.includes(email)) {
+                alert('This email is already in the group');
+                return;
+            }
+
+            currentEditingGroupEmails.push(email);
+            document.getElementById('newEmail').value = '';
+            document.getElementById('newEmailName').value = '';
+            document.getElementById('currentEmailCount').textContent = currentEditingGroupEmails.length;
+            renderCurrentEmails();
+            toggleAddEmailForm();
+        }
+
+        function removeEmailFromGroup(index) {
+            if (confirm('Remove this email from the group?')) {
+                currentEditingGroupEmails.splice(index, 1);
+                document.getElementById('currentEmailCount').textContent = currentEditingGroupEmails.length;
+                renderCurrentEmails();
+            }
+        }
+
+        async function saveGroupChanges() {
+            const name = document.getElementById('editGroupName').value.trim();
+            const description = document.getElementById('editGroupDesc').value.trim();
+
+            if (!name) {
+                alert('Please enter a group name');
+                return;
+            }
+
+            if (currentEditingGroupEmails.length === 0) {
+                alert('Group must have at least one email');
+                return;
+            }
+
+            const btn = event.target;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            try {
+                const response = await apiCall('/groups/' + currentEditingGroupId, 'PUT', {
+                    name,
+                    description,
+                    emails: currentEditingGroupEmails
+                }, true);
+
+                alert('✓ Group updated successfully');
+                closeEditModal();
+                loadAllGroups();
+            } catch (err) {
+                alert('Failed to update group: ' + err.message);
+            } finally {
+                btn.textContent = 'Save Changes';
+                btn.disabled = false;
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editGroupModal').style.display = 'none';
+            currentEditingGroupId = null;
+            currentEditingGroupEmails = [];
+        }
+
+        async function deleteGroup(groupId) {
+            if (!confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await apiCall('/groups/' + groupId, 'DELETE', null, true);
+                alert('✓ Group deleted successfully');
+                loadAllGroups();
+            } catch (err) {
+                alert('Failed to delete group: ' + err.message);
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('editGroupModal');
+            if (modal && event.target === modal) {
+                closeEditModal();
+            }
         }
