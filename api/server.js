@@ -197,145 +197,101 @@ function createTransporter() {
 }
 
 // ── Send Email Route (Using Job Queue) ────────────────────────────────────────
-app.post('/api/email/send', authMiddleware, async (req, res, next) => {
+app.post('/api/email/send', authMiddleware, async (req, res) => {
     try {
-        // Validate input first
+        await connectDB();
         const { groupId, subject, body, campaignName, attachments } = req.body;
-        
-        if (!groupId || typeof groupId !== 'string') {
-            return res.status(400).json({ success: false, message: 'Valid group ID required.' });
-        }
-        if (!subject || typeof subject !== 'string') {
-            return res.status(400).json({ success: false, message: 'Email subject required.' });
-        }
-        if (!body || typeof body !== 'string') {
-            return res.status(400).json({ success: false, message: 'Email body required.' });
-        }
-        if (!Array.isArray(attachments) && attachments !== undefined) {
-            return res.status(400).json({ success: false, message: 'Attachments must be an array.' });
+
+        if (!groupId || !subject || !body) {
+            return res.status(400).json({ success: false, message: 'Group, subject and body are required.' });
         }
 
-        await connectDB();
-        
         // Get group with all emails
         const group = await Group.findById(groupId);
-        if (!group) {
-            return res.status(404).json({ success: false, message: 'Group not found.' });
-        }
-        if (!group.emails || !Array.isArray(group.emails) || group.emails.length === 0) {
+        if (!group) return res.status(404).json({ success: false, message: 'Group not found.' });
+        if (!group.emails || group.emails.length === 0) {
             return res.status(400).json({ success: false, message: 'No emails in this group.' });
         }
 
-        // Verify Gmail credentials are configured
-        let transporter;
+        // Verify Gmail credentials
         try {
-            transporter = createTransporter();
+            const transporter = createTransporter();
             await transporter.verify();
         } catch (err) {
             console.error('Gmail verification failed:', err.message);
-            return res.status(503).json({
+            return res.status(500).json({
                 success: false,
-                message: 'Email service unavailable: ' + err.message
+                message: 'Gmail not configured: ' + err.message
             });
         }
 
         const fromEmail = `"${process.env.GMAIL_SENDER_NAME || 'Trugydex'}" <${process.env.GMAIL_USER}>`;
         const jobs = [];
         
-        // Validate email queue is ready
-        if (!emailQueue) {
-            return res.status(503).json({
-                success: false,
-                message: 'Email queue not initialized'
-            });
-        }
-        
-        let queueErrorOccurred = false;
-        for (let i = 0; i < group.emails.length; i++) {
-            const recipientEmail = group.emails[i];
-            if (!recipientEmail || typeof recipientEmail !== 'string' || !recipientEmail.includes('@')) {
-                console.warn(`Skipping invalid email at index ${i}: ${recipientEmail}`);
-                continue;
-            }
-            
-            const recipientName = group.names && Array.isArray(group.names) && group.names[i] 
-                ? String(group.names[i]).substring(0, 100)  // Limit name length
-                : recipientEmail;
-            
-            try {
+        try {
+            // Add each email to the queue
+            for (let i = 0; i < group.emails.length; i++) {
+                const recipientEmail = group.emails[i];
+                const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+                
                 const job = await emailQueue.add({
                     recipient: recipientEmail,
-                    subject: String(subject).substring(0, 200),  // Limit subject length
-                    body: String(body).substring(0, 50000),      // Limit body length
+                    subject: subject,
+                    body: body,
                     from: fromEmail,
-                    attachments: Array.isArray(attachments) ? attachments : [],
+                    attachments: attachments || [],
                     recipientName: recipientName
                 }, {
-                    attempts: parseInt(process.env.EMAIL_MAX_RETRIES || 3),
+                    attempts: parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
                     backoff: {
                         type: 'exponential',
                         delay: 2000
                     },
                     removeOnComplete: true,
-                    removeOnFail: false,
-                    timeout: 30000  // 30 second timeout per job
+                    removeOnFail: false
                 });
                 
-                if (job && job.id) {
-                    jobs.push(job.id);
-                }
-            } catch (jobErr) {
-                console.error(`Failed to queue email to ${recipientEmail}:`, jobErr.message);
-                queueErrorOccurred = true;
+                jobs.push(job.id);
             }
-        }
-
-        if (queueErrorOccurred && jobs.length === 0) {
+        } catch (queueErr) {
+            console.error('Queue error:', queueErr.message);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to queue any emails. Please check your email configuration.'
+                message: 'Failed to queue emails: ' + queueErr.message
             });
         }
 
         // Save campaign to DB
         try {
             const campaign = await Campaign.create({
-                name: (campaignName || 'Untitled Campaign').substring(0, 200),
+                name: campaignName || 'Untitled Campaign',
                 groupId,
                 groupName: group.name,
                 subject,
                 body,
                 recipientCount: group.emails.length,
                 status: 'queued',
-                sentBy: req.user.userId,
-                sentAt: new Date()
+                sentBy: req.user.userId
             });
 
             res.json({
                 success: true,
-                message: `Campaign queued! ${jobs.length} emails scheduled to be sent.`,
+                message: `Campaign queued! ${group.emails.length} emails scheduled to be sent.`,
                 campaignId: campaign._id,
                 totalEmails: group.emails.length,
                 queuedJobs: jobs.length
             });
         } catch (dbErr) {
-            console.error('Database error when saving campaign:', dbErr.message);
+            console.error('Database error:', dbErr.message);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to save campaign record: ' + dbErr.message
+                message: 'Failed to save campaign: ' + dbErr.message
             });
         }
 
     } catch (e) {
-        console.error('Email send endpoint error:', {
-            message: e.message,
-            stack: e.stack,
-            userId: req.user ? req.user.userId : 'unknown'
-        });
-        return res.status(500).json({
-            success: false,
-            message: 'Internal server error: ' + (e.message || 'Unknown error')
-        });
+        console.error('Email send endpoint error:', e.message, e.stack);
+        res.status(500).json({ success: false, message: 'Failed to queue emails: ' + e.message });
     }
 });
 
@@ -512,18 +468,10 @@ app.post('/api/auth/verify', authMiddleware, (req, res) => res.json({ success: t
 app.get('/api/users', adminOnly, async (req, res) => {
     try {
         await connectDB();
-        const users = await User.find({}, '-password').sort({ registeredAt: -1 }).limit(1000);
-        const stats = {
-            total: users.length,
-            pending: users.filter(u => u.status === 'pending').length,
-            approved: users.filter(u => u.status === 'approved').length,
-            rejected: users.filter(u => u.status === 'rejected').length
-        };
+        const users = await User.find({}, '-password').sort({ registeredAt: -1 });
+        const stats = { total: users.length, pending: users.filter(u => u.status === 'pending').length, approved: users.filter(u => u.status === 'approved').length, rejected: users.filter(u => u.status === 'rejected').length };
         res.json({ success: true, users, stats });
-    } catch (e) {
-        console.error('Failed to fetch users:', e.message);
-        res.status(500).json({ success: false, message: 'Failed to fetch users: ' + e.message });
-    }
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 app.put('/api/users/:id/approve', adminOnly, async (req, res) => {
@@ -537,17 +485,8 @@ app.put('/api/users/:id/reject', adminOnly, async (req, res) => {
 });
 
 app.get('/api/groups', authMiddleware, async (req, res) => {
-    try {
-        await connectDB();
-        const groups = await Group.find().sort({ createdAt: -1 }).select('-emails -names');
-        if (!Array.isArray(groups)) {
-            return res.json({ success: true, groups: [] });
-        }
-        res.json({ success: true, groups });
-    } catch (e) {
-        console.error('Failed to fetch groups:', e.message);
-        res.status(500).json({ success: false, message: 'Failed to fetch groups: ' + e.message });
-    }
+    try { await connectDB(); const groups = await Group.find().sort({ createdAt: -1 }).select('-emails -names'); res.json({ success: true, groups }); }
+    catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 app.post('/api/groups', authMiddleware, async (req, res) => {
@@ -617,38 +556,14 @@ app.get('/api/campaigns/stats', authMiddleware, async (req, res) => {
         await connectDB();
         const totalGroups = await Group.countDocuments();
         const totalCampaigns = await Campaign.countDocuments();
-        const agg = await Group.aggregate([
-            { $group: { _id: null, total: { $sum: '$recipientCount' } } }
-        ]);
-        
-        const totalRecipients = (agg && agg[0] && agg[0].total) ? agg[0].total : 0;
-        
-        res.json({
-            success: true,
-            stats: {
-                totalGroups,
-                totalRecipients,
-                totalCampaigns
-            }
-        });
-    } catch (e) {
-        console.error('Failed to fetch campaign stats:', e.message);
-        res.status(500).json({ success: false, message: 'Failed to fetch stats: ' + e.message });
-    }
+        const agg = await Group.aggregate([{ $group: { _id: null, total: { $sum: '$recipientCount' } } }]);
+        res.json({ success: true, stats: { totalGroups, totalRecipients: agg[0]?.total || 0, totalCampaigns } });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 app.get('/api/campaigns', authMiddleware, async (req, res) => {
-    try {
-        await connectDB();
-        const campaigns = await Campaign.find().sort({ sentAt: -1 }).limit(100);
-        if (!Array.isArray(campaigns)) {
-            return res.json({ success: true, campaigns: [] });
-        }
-        res.json({ success: true, campaigns });
-    } catch (e) {
-        console.error('Failed to fetch campaigns:', e.message);
-        res.status(500).json({ success: false, message: 'Failed to fetch campaigns: ' + e.message });
-    }
+    try { await connectDB(); const campaigns = await Campaign.find().sort({ sentAt: -1 }); res.json({ success: true, campaigns }); }
+    catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 app.post('/api/campaigns', authMiddleware, async (req, res) => {
@@ -844,20 +759,6 @@ app.get('/api/nse/search', authMiddleware, async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════════
 
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found.' }));
-
-// ─── Global Error Handler ──────────────────────────────────────────────────────
-// This must be the LAST middleware to catch all errors
-app.use((err, req, res, next) => {
-    console.error('❌ UNHANDLED ERROR:', err.message);
-    console.error('Stack:', err.stack);
-    
-    // Don't send stack trace to client, only message
-    res.status(err.status || 500).json({
-        success: false,
-        message: err.message || 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err : undefined
-    });
-});
 
 // ─── Server Startup ────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
