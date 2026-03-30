@@ -153,7 +153,7 @@ async function connectDB() {
 
 const userSchema = new mongoose.Schema({ name: String, email: { type: String, unique: true }, password: String, role: { type: String, default: 'Employee' }, status: { type: String, default: 'pending' }, emailVerified: { type: Boolean, default: false }, registeredAt: { type: Date, default: Date.now }, lastLogin: Date });
 const groupSchema = new mongoose.Schema({ name: String, description: String, emails: [String], names: [String], recipientCount: { type: Number, default: 0 }, createdBy: mongoose.Schema.Types.ObjectId, createdAt: { type: Date, default: Date.now } });
-const campaignSchema = new mongoose.Schema({ name: String, groupId: mongoose.Schema.Types.ObjectId, groupName: String, subject: String, body: String, recipientCount: { type: Number, default: 0 }, attachments: [String], status: { type: String, default: 'sent' }, sentBy: mongoose.Schema.Types.ObjectId, sentAt: { type: Date, default: Date.now } });
+const campaignSchema = new mongoose.Schema({ name: String, groupId: mongoose.Schema.Types.ObjectId, groupName: String, subject: String, body: String, recipientCount: { type: Number, default: 0 }, sentCount: { type: Number, default: 0 }, failedEmails: { type: String, default: null }, attachments: [String], status: { type: String, default: 'sent' }, method: { type: String, default: 'direct' }, sentBy: mongoose.Schema.Types.ObjectId, sentAt: { type: Date, default: Date.now } });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Group = mongoose.models.Group || mongoose.model('Group', groupSchema);
@@ -276,9 +276,9 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
                 subject,
                 body,
                 recipientCount: group.emails.length,
-                status: 'processing',
+                status: 'sending',
                 sentBy: req.user.userId,
-                method: process.env.REDIS_URL ? 'queue' : 'direct'
+                method: 'direct'
             });
         } catch (dbErr) {
             console.error('Campaign creation error:', dbErr.message);
@@ -288,87 +288,55 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
             });
         }
 
-        // Return response IMMEDIATELY - don't wait for email processing!
-        res.json({
-            success: true,
-            campaignId: campaign._id,
-            totalEmails: group.emails.length,
-            method: process.env.REDIS_URL ? 'queue' : 'direct',
-            message: process.env.REDIS_URL 
-                ? `✅ Campaign queued! ${group.emails.length} emails scheduled (sending in background)`
-                : `✅ Campaign processing! Emails will be sent (sending in background)`
+        // SYNCHRONOUS EMAIL SENDING - Required for Vercel serverless
+        // We MUST complete email sending before response, or use a proper background worker
+        let sentCount = 0;
+        let failedEmails = [];
+        
+        console.log(`📧 Sending ${group.emails.length} emails for campaign ${campaign._id}...`);
+        
+        for (let i = 0; i < group.emails.length; i++) {
+            const recipientEmail = group.emails[i];
+            const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
+            
+            try {
+                await sendEmailDirect(recipientEmail, subject, body, fromEmail, attachments || [], recipientName);
+                sentCount++;
+            } catch (e) {
+                console.error(`❌ Failed to send to ${recipientEmail}:`, e.message);
+                failedEmails.push({
+                    email: recipientEmail,
+                    error: e.message
+                });
+            }
+        }
+
+        // Update campaign with final status
+        const finalStatus = sentCount === group.emails.length ? 'sent' : 
+                           sentCount > 0 ? 'partial' : 'failed';
+        
+        await Campaign.findByIdAndUpdate(campaign._id, {
+            status: finalStatus,
+            sentCount: sentCount,
+            failedEmails: failedEmails.length > 0 ? JSON.stringify(failedEmails) : null
         });
 
-        // Process emails in background (don't await, don't block)
-        // This runs AFTER response is sent
-        (async () => {
-            try {
-                console.log(`📧 Processing ${group.emails.length} emails for campaign ${campaign._id}...`);
-                
-                // Try queue first
-                if (process.env.REDIS_URL) {
-                    try {
-                        console.log('📧 Queuing emails via Redis...');
-                        for (let i = 0; i < group.emails.length; i++) {
-                            const recipientEmail = group.emails[i];
-                            const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
-                            
-                            await emailQueue.add({
-                                recipient: recipientEmail,
-                                subject: subject,
-                                body: body,
-                                from: fromEmail,
-                                attachments: attachments || [],
-                                recipientName: recipientName,
-                                campaignId: campaign._id
-                            }, {
-                                attempts: parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
-                                backoff: {
-                                    type: 'exponential',
-                                    delay: 2000
-                                },
-                                removeOnComplete: true,
-                                removeOnFail: false
-                            });
-                        }
-                        console.log(`✓ Queued ${group.emails.length} emails successfully`);
-                        await Campaign.findByIdAndUpdate(campaign._id, { status: 'queued', sentCount: group.emails.length });
-                    } catch (queueErr) {
-                        console.error('Queue error, falling back to direct send:', queueErr.message);
-                        // Fallback to direct send
-                        let sentCount = 0;
-                        for (let i = 0; i < group.emails.length; i++) {
-                            const recipientEmail = group.emails[i];
-                            const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
-                            try {
-                                await sendEmailDirect(recipientEmail, subject, body, fromEmail, attachments || [], recipientName);
-                                sentCount++;
-                            } catch (e) {
-                                console.error(`Failed to send to ${recipientEmail}:`, e.message);
-                            }
-                        }
-                        await Campaign.findByIdAndUpdate(campaign._id, { status: 'sent', sentCount: sentCount });
-                    }
-                } else {
-                    // Direct send
-                    let sentCount = 0;
-                    for (let i = 0; i < group.emails.length; i++) {
-                        const recipientEmail = group.emails[i];
-                        const recipientName = group.names && group.names[i] ? group.names[i] : recipientEmail;
-                        try {
-                            await sendEmailDirect(recipientEmail, subject, body, fromEmail, attachments || [], recipientName);
-                            sentCount++;
-                        } catch (e) {
-                            console.error(`Failed to send to ${recipientEmail}:`, e.message);
-                        }
-                    }
-                    await Campaign.findByIdAndUpdate(campaign._id, { status: 'sent', sentCount: sentCount });
-                }
-            } catch (bgErr) {
-                console.error('Background email processing error:', bgErr.message);
-                await Campaign.findByIdAndUpdate(campaign._id, { status: 'error' }).catch(() => {});
-            }
-        })().catch(err => console.error('Unhandled background error:', err.message));
+        console.log(`✓ Campaign ${campaign._id} completed: ${sentCount}/${group.emails.length} emails sent`);
+
+        // Return response with actual results
+        res.json({
+            success: sentCount > 0,
+            campaignId: campaign._id,
+            totalEmails: group.emails.length,
+            sentEmails: sentCount,
+            failedEmails: failedEmails.length,
+            status: finalStatus,
+            message: sentCount === group.emails.length 
+                ? `✅ All ${sentCount} emails sent successfully!`
+                : sentCount > 0
+                ? `⚠️ Sent ${sentCount}/${group.emails.length} emails (${failedEmails.length} failed)`
+                : `❌ Failed to send any emails`
+        });
 
     } catch (e) {
         console.error('Email send endpoint error:', e.message);
@@ -376,14 +344,19 @@ app.post('/api/email/send', authMiddleware, async (req, res) => {
     }
 });
 
-// ── Get Campaign Queue Status ──────────────────────────────────────────────────
+// ── Get Campaign Status (with delivery details) ────────────────────────────────
 app.get('/api/campaigns/:campaignId/status', authMiddleware, async (req, res) => {
     try {
         await connectDB();
         const campaign = await Campaign.findById(req.params.campaignId);
         if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found.' });
         
-        const queueCounts = await emailQueue.getJobCounts();
+        let failedList = [];
+        try {
+            failedList = campaign.failedEmails ? JSON.parse(campaign.failedEmails) : [];
+        } catch (e) {
+            console.error('Error parsing failedEmails:', e.message);
+        }
         
         res.json({
             success: true,
@@ -392,9 +365,12 @@ app.get('/api/campaigns/:campaignId/status', authMiddleware, async (req, res) =>
                 name: campaign.name,
                 status: campaign.status,
                 totalRecipients: campaign.recipientCount,
-                sentAt: campaign.sentAt
-            },
-            queue: queueCounts
+                sentEmails: campaign.sentCount || 0,
+                failedEmails: failedList.length,
+                failureDetails: failedList,
+                sentAt: campaign.sentAt,
+                method: campaign.method
+            }
         });
     } catch (e) {
         res.status(500).json({ success: false, message: e.message });
